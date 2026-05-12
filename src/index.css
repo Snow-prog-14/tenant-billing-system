@@ -1218,3 +1218,390 @@ main {
   min-width: 160px;
   border-radius: 14px;
 }
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.compact-button {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.tenant-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.tracking-card,
+.receipt-section {
+  margin-top: 26px;
+}
+
+.tracking-card h3,
+.receipt-section h3 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.03em;
+}
+
+.tracking-card p,
+.receipt-section p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.full-table {
+  max-width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .tenant-summary-grid {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .tenant-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-actions {
+    display: grid;
+  }
+}
+
+.ledger-layout {
+  display: grid;
+  grid-template-columns: minmax(620px, 1.4fr) minmax(420px, 0.9fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.ledger-side-tables {
+  display: grid;
+  gap: 24px;
+}
+
+.ledger-table-card {
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.sheet-table th {
+  background: #22b8c7;
+  color: white;
+  font-weight: 800;
+  text-align: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.25);
+}
+
+.sheet-table td {
+  text-align: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  color: #0f172a;
+}
+
+.sheet-table tbody tr:nth-child(even) {
+  background: #e6fafa;
+}
+
+.sheet-table tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.mini-sheet-table th {
+  background: #7f7be8;
+}
+
+.submeter-table th {
+  background: #16a394;
+}
+
+.main-ledger {
+  overflow-x: auto;
+}
+
+@media (max-width: 1200px) {
+  .ledger-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .sheet-table {
+    min-width: 720px;
+  }
+
+  .ledger-table-card {
+    overflow-x: auto;
+  }
+}
+
+.tenant-ledger-page {
+  max-width: 1500px;
+}
+
+.tenant-profile-hero {
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  color: white;
+  border-radius: 30px;
+  padding: 28px;
+  margin-bottom: 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.2);
+}
+
+.tenant-profile-hero h2 {
+  margin: 4px 0 6px;
+  font-size: 34px;
+  letter-spacing: -0.04em;
+}
+
+.tenant-profile-hero p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.ghost-button {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 999px;
+  padding: 9px 13px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-bottom: 18px;
+}
+
+.ghost-button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.tenant-balance-card {
+  min-width: 280px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 24px;
+  padding: 20px;
+}
+
+.tenant-balance-card span {
+  display: block;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.tenant-balance-card strong {
+  font-size: 34px;
+  letter-spacing: -0.05em;
+}
+
+.compact-summary {
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  margin-bottom: 24px;
+}
+
+.ledger-board {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 30px;
+  padding: 24px;
+  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.ledger-board-header {
+  margin-bottom: 18px;
+}
+
+.ledger-board-header h3,
+.receipt-preview-section h3 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+
+.ledger-board-header p,
+.receipt-preview-section p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.ledger-main-table-wrap {
+  overflow-x: auto;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.06);
+}
+
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: white;
+}
+
+.ledger-main-table {
+  min-width: 950px;
+}
+
+.sheet-table th {
+  background: #19b7c8;
+  color: white;
+  font-weight: 900;
+  text-align: center;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+}
+
+.sheet-table td {
+  text-align: center;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+}
+
+.sheet-table tbody tr:nth-child(even) {
+  background: #e8fbfc;
+}
+
+.sheet-table tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.sheet-table tbody tr:hover {
+  background: #dff7ff;
+}
+
+.receipt-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ledger-mini-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.ledger-table-card {
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.mini-sheet-table th {
+  background: #7c73e6;
+}
+
+.submeter-table th {
+  background: #16a394;
+}
+
+.receipt-preview-section {
+  margin-top: 28px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 30px;
+  padding: 24px;
+  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.08);
+}
+
+.empty-receipt-card {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 22px;
+  padding: 28px;
+  text-align: center;
+  color: #475569;
+}
+
+.empty-receipt-card strong {
+  display: block;
+  color: #0f172a;
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.receipt-preview-wrap {
+  max-width: 520px;
+}
+
+@media (max-width: 1200px) {
+  .compact-summary {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+
+  .ledger-mini-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .tenant-profile-hero {
+    display: grid;
+  }
+
+  .tenant-balance-card {
+    min-width: 0;
+  }
+
+  .compact-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .ledger-board,
+  .receipt-preview-section {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .receipt-preview-wrap {
+    max-width: 100%;
+  }
+}
+
+.form-grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+@media (max-width: 1100px) {
+  .form-grid-5 {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .form-grid-5 {
+    grid-template-columns: 1fr;
+  }
+}

@@ -25,6 +25,9 @@ export type UtilityBill = {
 
   previousUnpaidBalance: number;
   amountPaid: number;
+
+  electricPaidDate?: string | null;
+waterPaidDate?: string | null;
 };
 
 export type RentBill = {
@@ -37,11 +40,13 @@ export type RentBill = {
   rentAmount: number;
   previousUnpaidBalance: number;
   amountPaid: number;
+  rentPaidDate?: string | null;
 };
 
 export type Page =
   | "dashboard"
   | "tenants"
+  | "tenantDetails"
   | "utility"
   | "addUtility"
   | "rent"

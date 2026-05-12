@@ -18,6 +18,7 @@ import {
 } from "./utils/billingCalculations";
 import AddUtilityBillForm from "./components/AddUtilityBillForm";
 import AddRentBillForm from "./components/AddRentBillForm";
+import TenantDetailsPage from "./pages/TenantDetailsPage";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -29,6 +30,7 @@ function App() {
   const [isLoadingUtilityBills, setIsLoadingUtilityBills] = useState(true);
   const [rentBills, setRentBills] = useState<RentBill[]>([]);
 const [isLoadingRentBills, setIsLoadingRentBills] = useState(true);
+const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
 
   const [settings, setSettings] = useState<BillingSettings>({
     waterRate: 42.6,
@@ -367,7 +369,10 @@ async function handleDeleteRentBill(billId: number) {
   }
 }
 
- 
+ function handleViewTenant(tenantId: number) {
+  setSelectedTenantId(tenantId);
+  setActivePage("tenantDetails");
+}
 
  const totalUtilityDue = utilityBills.reduce(
   (sum, bill) => sum + calculateTotalUtilityDue(bill),
@@ -439,12 +444,49 @@ async function handleDeleteRentBill(billId: number) {
           </section>
         )}
 
-        {activePage === "tenants" && (
-<TenantsPage
-  tenants={tenants}
-  onAddTenant={handleAddTenant}
-  onDeleteTenant={handleDeleteTenant}
-/>        )}
+     {activePage === "tenants" && (
+  <TenantsPage
+    tenants={tenants}
+    onAddTenant={handleAddTenant}
+    onDeleteTenant={handleDeleteTenant}
+    onViewTenant={handleViewTenant}
+  />
+)}
+
+{activePage === "tenantDetails" && selectedTenantId && (
+  <>
+    {(() => {
+      const selectedTenant = tenants.find(
+        (tenant) => tenant.id === selectedTenantId
+      );
+
+      if (!selectedTenant) {
+        return (
+          <section className="page-section">
+            <p>Tenant not found.</p>
+            <button
+              className="secondary-button"
+              onClick={() => setActivePage("tenants")}
+            >
+              Back to Tenants
+            </button>
+          </section>
+        );
+      }
+
+      return (
+        <TenantDetailsPage
+          tenant={selectedTenant}
+          utilityBills={utilityBills}
+          rentBills={rentBills}
+          onBack={() => setActivePage("tenants")}
+          onDeleteUtilityBill={handleDeleteUtilityBill}
+          onDeleteRentBill={handleDeleteRentBill}
+        />
+      );
+    })()}
+  </>
+)}
 
     {activePage === "utility" && (
   <section className="page-section">

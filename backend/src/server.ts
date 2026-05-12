@@ -209,7 +209,9 @@ app.get("/api/utility-bills", async (_req, res) => {
         additional_charges AS additionalCharges,
 
         previous_unpaid_balance AS previousUnpaidBalance,
-        amount_paid AS amountPaid
+        amount_paid AS amountPaid,
+        DATE_FORMAT(electric_paid_date, '%M %d, %Y') AS electricPaidDate,
+        DATE_FORMAT(water_paid_date, '%M %d, %Y') AS waterPaidDate
       FROM utility_bills
       ORDER BY id DESC
     `);
@@ -226,21 +228,23 @@ app.get("/api/utility-bills", async (_req, res) => {
 
 app.post("/api/utility-bills", async (req, res) => {
   try {
-    const {
-      tenantId,
-      billingDate,
-      billingPeriod,
-      dueDate,
-      previousWaterReading,
-      currentWaterReading,
-      waterRate,
-      previousElectricReading,
-      currentElectricReading,
-      electricRate,
-      additionalCharges,
-      previousUnpaidBalance,
-      amountPaid,
-    } = req.body;
+const {
+  tenantId,
+  billingDate,
+  billingPeriod,
+  dueDate,
+  previousWaterReading,
+  currentWaterReading,
+  waterRate,
+  previousElectricReading,
+  currentElectricReading,
+  electricRate,
+  additionalCharges,
+  previousUnpaidBalance,
+  amountPaid,
+  electricPaidDate,
+  waterPaidDate,
+} = req.body;
 
     if (
       !tenantId ||
@@ -273,26 +277,29 @@ app.post("/api/utility-bills", async (req, res) => {
         current_electric_reading,
         electric_rate,
         additional_charges,
-        previous_unpaid_balance,
-        amount_paid
+       previous_unpaid_balance,
+amount_paid,
+electric_paid_date,
+water_paid_date
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      [
-        tenantId,
-        billingDate,
-        billingPeriod,
-        dueDate,
-        previousWaterReading,
-        currentWaterReading,
-        waterRate,
-        previousElectricReading,
-        currentElectricReading,
-        electricRate,
-        additionalCharges || 0,
-        previousUnpaidBalance || 0,
-        amountPaid || 0,
-      ]
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)      `,
+     [
+  tenantId,
+  billingDate,
+  billingPeriod,
+  dueDate,
+  previousWaterReading,
+  currentWaterReading,
+  waterRate,
+  previousElectricReading,
+  currentElectricReading,
+  electricRate,
+  additionalCharges || 0,
+  previousUnpaidBalance || 0,
+  amountPaid || 0,
+  electricPaidDate || null,
+  waterPaidDate || null,
+]
     );
 
     res.status(201).json({
@@ -318,7 +325,8 @@ app.get("/api/rent-bills", async (_req, res) => {
         DATE_FORMAT(due_date, '%M %d, %Y') AS dueDate,
         rent_amount AS rentAmount,
         previous_unpaid_balance AS previousUnpaidBalance,
-        amount_paid AS amountPaid
+        amount_paid AS amountPaid,
+        DATE_FORMAT(rent_paid_date, '%M %d, %Y') AS rentPaidDate
       FROM rent_bills
       ORDER BY id DESC
     `);
@@ -335,14 +343,15 @@ app.get("/api/rent-bills", async (_req, res) => {
 
 app.post("/api/rent-bills", async (req, res) => {
   try {
-    const {
-      tenantId,
-      billingPeriod,
-      dueDate,
-      rentAmount,
-      previousUnpaidBalance,
-      amountPaid,
-    } = req.body;
+ const {
+  tenantId,
+  billingPeriod,
+  dueDate,
+  rentAmount,
+  previousUnpaidBalance,
+  amountPaid,
+  rentPaidDate,
+} = req.body;
 
     if (!tenantId || !billingPeriod || !dueDate || rentAmount === undefined) {
       return res.status(400).json({
@@ -357,19 +366,20 @@ app.post("/api/rent-bills", async (req, res) => {
         billing_period,
         due_date,
         rent_amount,
-        previous_unpaid_balance,
-        amount_paid
+     previous_unpaid_balance,
+amount_paid,
+rent_paid_date
       )
-      VALUES (?, ?, ?, ?, ?, ?)
-      `,
-      [
-        tenantId,
-        billingPeriod,
-        dueDate,
-        rentAmount,
-        previousUnpaidBalance || 0,
-        amountPaid || 0,
-      ]
+VALUES (?, ?, ?, ?, ?, ?, ?)      `,
+  [
+  tenantId,
+  billingPeriod,
+  dueDate,
+  rentAmount,
+  previousUnpaidBalance || 0,
+  amountPaid || 0,
+  rentPaidDate || null,
+]
     );
 
     res.status(201).json({

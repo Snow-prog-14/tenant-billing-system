@@ -6,12 +6,14 @@ type TenantsPageProps = {
   tenants: Tenant[];
   onAddTenant: (tenant: Tenant) => void;
   onDeleteTenant: (tenantId: number) => void;
+  onViewTenant: (tenantId: number) => void;
 };
 
 function TenantsPage({
   tenants,
   onAddTenant,
   onDeleteTenant,
+  onViewTenant,
 }: TenantsPageProps) {
   return (
     <section className="page-section">
@@ -51,12 +53,21 @@ function TenantsPage({
                   </span>
                 </td>
                 <td>
-                  <button
-                    className="danger-button"
-                    onClick={() => onDeleteTenant(tenant.id)}
-                  >
-                    Delete
-                  </button>
+                  <div className="table-actions">
+                    <button
+                      className="secondary-button compact-button"
+                      onClick={() => onViewTenant(tenant.id)}
+                    >
+                      View
+                    </button>
+
+                    <button
+                      className="danger-button compact-button"
+                      onClick={() => onDeleteTenant(tenant.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

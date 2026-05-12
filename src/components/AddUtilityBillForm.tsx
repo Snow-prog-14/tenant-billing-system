@@ -83,6 +83,8 @@ function AddUtilityBillForm({
   const [additionalCharges, setAdditionalCharges] = useState("0");
   const [previousUnpaidBalance, setPreviousUnpaidBalance] = useState("0");
   const [amountPaid, setAmountPaid] = useState("0");
+  const [electricPaidDate, setElectricPaidDate] = useState("");
+const [waterPaidDate, setWaterPaidDate] = useState("");
 
   const selectedTenant = tenants.find((tenant) => tenant.id === Number(tenantId));
 
@@ -166,6 +168,9 @@ function AddUtilityBillForm({
 
       previousUnpaidBalance: Number(previousUnpaidBalance),
       amountPaid: Number(amountPaid),
+
+      electricPaidDate: electricPaidDate || null,
+waterPaidDate: waterPaidDate || null,
     });
 
     setTenantId("");
@@ -344,8 +349,8 @@ function AddUtilityBillForm({
           </div>
         </div>
 
-        <div className="form-grid-4">
-          <div className="form-group">
+<div className="form-grid-5">
+            <div className="form-group">
             <label htmlFor="additionalCharges">Additional Charges</label>
             <input
               id="additionalCharges"
