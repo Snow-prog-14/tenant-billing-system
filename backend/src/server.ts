@@ -92,6 +92,49 @@ app.post("/api/tenants", async (req, res) => {
   }
 });
 
+app.put("/api/tenants/:id", async (req, res) => {
+  try {
+    const tenantId = Number(req.params.id);
+    const { name, roomNo, monthlyRent, status } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({
+        message: "Valid tenant ID is required",
+      });
+    }
+
+    if (!name || !roomNo || monthlyRent === undefined || !status) {
+      return res.status(400).json({
+        message: "Name, room number, monthly rent, and status are required",
+      });
+    }
+
+    const [result] = await db.query(
+      `
+      UPDATE tenants
+      SET
+        name = ?,
+        room_no = ?,
+        monthly_rent = ?,
+        status = ?
+      WHERE id = ?
+      `,
+      [name, roomNo, monthlyRent, status, tenantId]
+    );
+
+    res.json({
+      message: "Tenant updated successfully",
+      result,
+    });
+  } catch (error) {
+    console.error("Update tenant error:", error);
+
+    res.status(500).json({
+      message: "Failed to update tenant",
+    });
+  }
+});
+
 app.delete("/api/tenants/:id", async (req, res) => {
   try {
     const tenantId = Number(req.params.id);

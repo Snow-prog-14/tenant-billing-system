@@ -260,6 +260,36 @@ function App() {
     }
   }
 
+  async function handleUpdateTenant(updatedTenant: Tenant) {
+  try {
+    const response = await fetch(`${API_URL}/tenants/${updatedTenant.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: updatedTenant.name,
+        roomNo: updatedTenant.roomNo,
+        monthlyRent: updatedTenant.monthlyRent,
+        status: updatedTenant.status,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update tenant");
+    }
+
+    setTenants((currentTenants) =>
+      currentTenants.map((tenant) =>
+        tenant.id === updatedTenant.id ? updatedTenant : tenant
+      )
+    );
+  } catch (error) {
+    console.error(error);
+    alert("Could not update tenant in database.");
+  }
+}
+
   async function handleDeleteTenant(tenantId: number) {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this tenant?"
@@ -557,12 +587,13 @@ function App() {
         )}
 
         {activePage === "tenants" && (
-          <TenantsPage
-            tenants={tenants}
-            onAddTenant={handleAddTenant}
-            onDeleteTenant={handleDeleteTenant}
-            onViewTenant={handleViewTenant}
-          />
+        <TenantsPage
+  tenants={tenants}
+  onAddTenant={handleAddTenant}
+  onDeleteTenant={handleDeleteTenant}
+  onUpdateTenant={handleUpdateTenant}
+  onViewTenant={handleViewTenant}
+/>
         )}
 
         {activePage === "tenantDetails" && (
@@ -601,12 +632,12 @@ function App() {
                 <p>Review monthly water and electricity bills.</p>
               </div>
 
-              <button
-                className="primary-button"
-                onClick={() => setActivePage("addUtility")}
-              >
-                + Add Utility Bill
-              </button>
+           <button
+  className="primary-button page-action-button"
+  onClick={() => setActivePage("addUtility")}
+>
+  + Add Utility Bill
+</button>
             </div>
 
             {isLoadingUtilityBills ? (
@@ -686,13 +717,12 @@ function App() {
                 <h2>Rent Bills</h2>
                 <p>Review monthly room rent bills.</p>
               </div>
-
-              <button
-                className="primary-button"
-                onClick={() => setActivePage("addRent")}
-              >
-                + Add Rent Bill
-              </button>
+<button
+  className="primary-button page-action-button"
+  onClick={() => setActivePage("addRent")}
+>
+  + Add Rent Bill
+</button>
             </div>
 
             {isLoadingRentBills ? (

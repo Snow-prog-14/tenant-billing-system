@@ -22,7 +22,7 @@ function UtilityBillCard({
   payments,
   onDeleteBill,
 }: UtilityBillCardProps) {
-    const billRef = useRef<HTMLElement>(null);
+  const billRef = useRef<HTMLElement>(null);
 
   const waterConsumption = calculateWaterConsumption(bill);
   const waterBill = calculateWaterBill(bill);
@@ -30,11 +30,21 @@ function UtilityBillCard({
   const electricConsumption = calculateElectricConsumption(bill);
   const electricBill = calculateElectricBill(bill);
 
-  const electricPayments = payments.filter(p => p.billType === "utility_electric");
-  const waterPayments = payments.filter(p => p.billType === "utility_water");
+  const electricPayments = payments.filter(
+    (payment) => payment.billType === "utility_electric"
+  );
+  const waterPayments = payments.filter(
+    (payment) => payment.billType === "utility_water"
+  );
 
-  const elecPaid = electricPayments.reduce((sum, p) => sum + p.amount, 0);
-  const waterPaid = waterPayments.reduce((sum, p) => sum + p.amount, 0);
+  const elecPaid = electricPayments.reduce(
+    (sum, payment) => sum + Number(payment.amount),
+    0
+  );
+  const waterPaid = waterPayments.reduce(
+    (sum, payment) => sum + Number(payment.amount),
+    0
+  );
 
   const totalBill = waterBill + electricBill + bill.previousUnpaidBalance;
   const totalPaid = elecPaid + waterPaid;
@@ -63,37 +73,42 @@ function UtilityBillCard({
 
   return (
     <div className="bill-wrapper">
-      <div className="bill-actions">
-  <button className="secondary-button" onClick={handlePrint}>
-    Print
-  </button>
-
-  <button className="primary-button" onClick={handleSaveAsPhoto}>
-    Save as Photo
-  </button>
-
-  {onDeleteBill && (
-    <button
-      className="danger-button"
-      onClick={() => onDeleteBill(bill.id)}
-    >
-      Delete
-    </button>
-  )}
-</div>
-
-      <section className="modern-bill-card" ref={billRef}>
-        <div className="modern-bill-header utility-header">
+      <section className="modern-bill-card premium-bill-card utility-bill-card" ref={billRef}>
+        <div className="modern-bill-header utility-header premium-bill-header">
           <div>
             <p className="bill-label">Utility Bill</p>
             <h2>Monthly Tenant Utility Bill</h2>
+            <p className="bill-subtitle">{bill.billingPeriod}</p>
           </div>
 
-          <div className="bill-pill">Room {tenant.roomNo}</div>
+          <div className="bill-header-side">
+            <div className="bill-pill">Room {tenant.roomNo}</div>
+            <strong>{formatPeso(totalDue)}</strong>
+            <span>Remaining Balance</span>
+          </div>
+        </div>
+
+        <div className="bill-action-bar">
+          <button className="secondary-button compact-button" onClick={handlePrint}>
+            Print
+          </button>
+
+          <button className="primary-button compact-button" onClick={handleSaveAsPhoto}>
+            Save as Photo
+          </button>
+
+          {onDeleteBill && (
+            <button
+              className="danger-button compact-button"
+              onClick={() => onDeleteBill(bill.id)}
+            >
+              Delete
+            </button>
+          )}
         </div>
 
         <div className="modern-bill-body">
-          <div className="tenant-summary">
+          <div className="tenant-summary premium-summary">
             <div>
               <span>Tenant Name</span>
               <strong>{tenant.name}</strong>
@@ -103,67 +118,71 @@ function UtilityBillCard({
               <strong>{bill.billingDate}</strong>
             </div>
             <div>
-              <span>Billing Period</span>
-              <strong>{bill.billingPeriod}</strong>
-            </div>
-            <div>
               <span>Due Date</span>
               <strong>{bill.dueDate}</strong>
             </div>
-          </div>
-
-          <div className="modern-section">
-            <div className="modern-section-title">
-              <h3>Water Bill</h3>
-              <strong>{formatPeso(waterBill)}</strong>
-            </div>
-
-            <div className="modern-row">
-              <span>Consumption</span>
-              <strong>{waterConsumption.toFixed(1)} cu.m</strong>
-            </div>
-            <div className="modern-row">
-              <span>Rate</span>
-              <strong>{formatPeso(bill.waterRate)}</strong>
-            </div>
-            <div className="modern-row">
-              <span>Water Paid</span>
-              <strong className="paid-text">{formatPeso(waterPaid)}</strong>
-            </div>
-            <div className="modern-row">
-              <span>Water Balance</span>
-              <strong>{formatPeso(waterBill - waterPaid)}</strong>
+            <div>
+              <span>Total Bill</span>
+              <strong>{formatPeso(totalBill)}</strong>
             </div>
           </div>
 
-          <div className="modern-section">
-            <div className="modern-section-title">
-              <h3>Electricity Bill</h3>
-              <strong>{formatPeso(electricBill)}</strong>
+          <div className="bill-breakdown-grid">
+            <div className="modern-section premium-section">
+              <div className="modern-section-title">
+                <h3>Water</h3>
+                <strong>{formatPeso(waterBill)}</strong>
+              </div>
+
+              <div className="modern-row">
+                <span>Consumption</span>
+                <strong>{waterConsumption.toFixed(1)} cu.m</strong>
+              </div>
+              <div className="modern-row">
+                <span>Rate</span>
+                <strong>{formatPeso(bill.waterRate)}</strong>
+              </div>
+              <div className="modern-row">
+                <span>Paid</span>
+                <strong className="paid-text">{formatPeso(waterPaid)}</strong>
+              </div>
+              <div className="modern-row">
+                <span>Balance</span>
+                <strong>{formatPeso(waterBill - waterPaid)}</strong>
+              </div>
             </div>
 
-            <div className="modern-row">
-              <span>Consumption</span>
-              <strong>{electricConsumption.toFixed(1)} kWh</strong>
-            </div>
-            <div className="modern-row">
-              <span>Rate</span>
-              <strong>{formatPeso(bill.electricRate)}</strong>
-            </div>
-            <div className="modern-row">
-              <span>Electric Paid</span>
-              <strong className="paid-text">{formatPeso(elecPaid)}</strong>
-            </div>
-            <div className="modern-row">
-              <span>Electric Balance</span>
-              <strong>{formatPeso(electricBill - elecPaid)}</strong>
+            <div className="modern-section premium-section">
+              <div className="modern-section-title">
+                <h3>Electricity</h3>
+                <strong>{formatPeso(electricBill)}</strong>
+              </div>
+
+              <div className="modern-row">
+                <span>Consumption</span>
+                <strong>{electricConsumption.toFixed(1)} kWh</strong>
+              </div>
+              <div className="modern-row">
+                <span>Rate</span>
+                <strong>{formatPeso(bill.electricRate)}</strong>
+              </div>
+              <div className="modern-row">
+                <span>Paid</span>
+                <strong className="paid-text">{formatPeso(elecPaid)}</strong>
+              </div>
+              <div className="modern-row">
+                <span>Balance</span>
+                <strong>{formatPeso(electricBill - elecPaid)}</strong>
+              </div>
             </div>
           </div>
 
-          <div className="modern-section payment-history-section">
+          <div className="modern-section payment-history-section premium-section">
             <div className="modern-section-title">
               <h3>Payment History</h3>
+              <strong>{formatPeso(totalPaid)}</strong>
             </div>
+
             {payments.length > 0 ? (
               <table className="receipt-history-table">
                 <thead>
@@ -174,21 +193,23 @@ function UtilityBillCard({
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.sort((a,b) => b.datePaid.localeCompare(a.datePaid)).map(p => (
-                    <tr key={p.id}>
-                      <td>{p.datePaid}</td>
-                      <td>{p.billType.replace("utility_", "")}</td>
-                      <td>{formatPeso(p.amount)}</td>
-                    </tr>
-                  ))}
+                  {[...payments]
+                    .sort((a, b) => b.datePaid.localeCompare(a.datePaid))
+                    .map((payment) => (
+                      <tr key={payment.id}>
+                        <td>{payment.datePaid}</td>
+                        <td>{payment.billType.replace("utility_", "")}</td>
+                        <td>{formatPeso(payment.amount)}</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             ) : (
-              <p>No payments recorded yet.</p>
+              <p className="empty-note">No payments recorded yet.</p>
             )}
           </div>
 
-          <div className="modern-total">
+          <div className="modern-total premium-total">
             <span>Total Remaining Balance</span>
             <strong>{formatPeso(totalDue)}</strong>
           </div>
