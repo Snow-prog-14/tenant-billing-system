@@ -22,6 +22,13 @@ function Sidebar({ activePage, onChangePage }: SidebarProps) {
         </button>
 
         <button
+          className={activePage === "tenants" ? "active" : ""}
+          onClick={() => onChangePage("tenants")}
+        >
+          Tenants
+        </button>
+
+        <button
           className={activePage === "utility" ? "active" : ""}
           onClick={() => onChangePage("utility")}
         >

@@ -2,7 +2,8 @@ import { useState } from "react";
 import RentBillCard from "./components/RentBillCard";
 import Sidebar from "./components/Sidebar";
 import UtilityBillCard from "./components/UtilityBillCard";
-import { rentBills, tenants, utilityBills } from "./data/sampleData";
+import TenantsPage from "./pages/TenantsPage";
+import { rentBills, tenants as sampleTenants, utilityBills } from "./data/sampleData";
 import type { Page } from "./types/billing";
 import {
   calculateTotalRentDue,
@@ -12,6 +13,7 @@ import {
 
 function App() {
   const [activePage, setActivePage] = useState<Page>("dashboard");
+  const [tenants, setTenants] = useState(sampleTenants);
 
   const totalUtilityDue = utilityBills.reduce(
     (sum, bill) => sum + calculateTotalUtilityDue(bill),
@@ -61,6 +63,12 @@ function App() {
           </section>
         )}
 
+{activePage === "tenants" && (
+  <TenantsPage
+    tenants={tenants}
+    onAddTenant={(tenant) => setTenants([...tenants, tenant])}
+  />
+)}
         {activePage === "utility" && (
           <section className="page-section">
             <h2>Utility Bills</h2>

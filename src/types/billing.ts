@@ -3,6 +3,7 @@ export type Tenant = {
   name: string;
   roomNo: string;
   monthlyRent: number;
+  status: "active" | "inactive";
 };
 
 export type UtilityBill = {
@@ -38,4 +39,4 @@ export type RentBill = {
   amountPaid: number;
 };
 
-export type Page = "dashboard" | "utility" | "rent";
+export type Page = "dashboard" | "tenants" | "utility" | "rent";

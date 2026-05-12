@@ -6,12 +6,14 @@ export const tenants: Tenant[] = [
     name: "Angelica Aljas",
     roomNo: "1",
     monthlyRent: 3000,
+    status: "active",
   },
   {
     id: 2,
     name: "Hazie Carra De Guzman",
     roomNo: "2",
     monthlyRent: 3000,
+    status: "active",
   },
 ];
 
