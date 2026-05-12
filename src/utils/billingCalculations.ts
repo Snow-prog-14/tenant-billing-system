@@ -1,4 +1,4 @@
-import type { UtilityBill } from "../types/billing";
+import type { RentBill, UtilityBill } from "../types/billing";
 
 export function calculateWaterConsumption(bill: UtilityBill): number {
   return bill.currentWaterReading - bill.previousWaterReading;
@@ -13,7 +13,10 @@ export function calculateElectricConsumption(bill: UtilityBill): number {
 }
 
 export function calculateElectricBill(bill: UtilityBill): number {
-  return calculateElectricConsumption(bill) * bill.electricRate + bill.additionalCharges;
+  return (
+    calculateElectricConsumption(bill) * bill.electricRate +
+    bill.additionalCharges
+  );
 }
 
 export function calculateTotalUtilityDue(bill: UtilityBill): number {
@@ -23,6 +26,10 @@ export function calculateTotalUtilityDue(bill: UtilityBill): number {
     bill.previousUnpaidBalance -
     bill.amountPaid
   );
+}
+
+export function calculateTotalRentDue(bill: RentBill): number {
+  return bill.rentAmount + bill.previousUnpaidBalance - bill.amountPaid;
 }
 
 export function formatPeso(amount: number): string {

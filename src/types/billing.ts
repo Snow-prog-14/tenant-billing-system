@@ -25,3 +25,17 @@ export type UtilityBill = {
   previousUnpaidBalance: number;
   amountPaid: number;
 };
+
+export type RentBill = {
+  id: number;
+  tenantId: number;
+
+  billingPeriod: string;
+  dueDate: string;
+
+  rentAmount: number;
+  previousUnpaidBalance: number;
+  amountPaid: number;
+};
+
+export type Page = "dashboard" | "utility" | "rent";

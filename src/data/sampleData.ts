@@ -1,4 +1,4 @@
-import type { Tenant, UtilityBill } from "../types/billing";
+import type { RentBill, Tenant, UtilityBill } from "../types/billing";
 
 export const tenants: Tenant[] = [
   {
@@ -55,5 +55,30 @@ export const utilityBills: UtilityBill[] = [
 
     previousUnpaidBalance: 905.58,
     amountPaid: 1294,
+  },
+];
+
+export const rentBills: RentBill[] = [
+  {
+    id: 1,
+    tenantId: 1,
+
+    billingPeriod: "February 2026 – March 2026",
+    dueDate: "April 5, 2026",
+
+    rentAmount: 3000,
+    previousUnpaidBalance: 0,
+    amountPaid: 0,
+  },
+  {
+    id: 2,
+    tenantId: 2,
+
+    billingPeriod: "February 2026 – March 2026",
+    dueDate: "April 15, 2026",
+
+    rentAmount: 3000,
+    previousUnpaidBalance: 0,
+    amountPaid: 3000,
   },
 ];
