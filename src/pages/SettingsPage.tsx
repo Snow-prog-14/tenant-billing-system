@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { BillingSettings } from "../types/billing";
 
 type SettingsPageProps = {
@@ -6,14 +7,24 @@ type SettingsPageProps = {
 };
 
 function SettingsPage({ settings, onUpdateSettings }: SettingsPageProps) {
-  function updateNumberSetting(
-    key: keyof BillingSettings,
-    value: string
-  ) {
-    onUpdateSettings({
-      ...settings,
+  const [localSettings, setLocalSettings] =
+    useState<BillingSettings>(settings);
+
+  useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings]);
+
+  function updateNumberSetting(key: keyof BillingSettings, value: string) {
+    setLocalSettings({
+      ...localSettings,
       [key]: Number(value),
     });
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onUpdateSettings(localSettings);
+    alert("Settings saved successfully.");
   }
 
   return (
@@ -28,86 +39,97 @@ function SettingsPage({ settings, onUpdateSettings }: SettingsPageProps) {
         </div>
       </div>
 
-      <div className="settings-grid">
-        <div className="settings-card">
-          <h3>Utility Rates</h3>
+      <form onSubmit={handleSubmit}>
+        <div className="settings-grid">
+          <div className="settings-card">
+            <h3>Utility Rates</h3>
 
-          <div className="form-group">
-            <label htmlFor="waterRate">Water Rate per cu.m</label>
-            <input
-              id="waterRate"
-              type="number"
-              step="0.01"
-              value={settings.waterRate}
-              onChange={(event) =>
-                updateNumberSetting("waterRate", event.target.value)
-              }
-            />
+            <div className="form-group">
+              <label htmlFor="waterRate">Water Rate per cu.m</label>
+              <input
+                id="waterRate"
+                type="number"
+                step="0.01"
+                value={localSettings.waterRate}
+                onChange={(event) =>
+                  updateNumberSetting("waterRate", event.target.value)
+                }
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="electricRate">Electricity Rate per kWh</label>
+              <input
+                id="electricRate"
+                type="number"
+                step="0.01"
+                value={localSettings.electricRate}
+                onChange={(event) =>
+                  updateNumberSetting("electricRate", event.target.value)
+                }
+              />
+            </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="electricRate">Electricity Rate per kWh</label>
-            <input
-              id="electricRate"
-              type="number"
-              step="0.01"
-              value={settings.electricRate}
-              onChange={(event) =>
-                updateNumberSetting("electricRate", event.target.value)
-              }
-            />
+          <div className="settings-card">
+            <h3>Rent Defaults</h3>
+
+            <div className="form-group">
+              <label htmlFor="defaultMonthlyRent">Default Monthly Rent</label>
+              <input
+                id="defaultMonthlyRent"
+                type="number"
+                step="0.01"
+                value={localSettings.defaultMonthlyRent}
+                onChange={(event) =>
+                  updateNumberSetting(
+                    "defaultMonthlyRent",
+                    event.target.value
+                  )
+                }
+              />
+            </div>
+          </div>
+
+          <div className="settings-card">
+            <h3>Due Dates</h3>
+
+            <div className="form-group">
+              <label htmlFor="utilityDueDay">Utility Due Day</label>
+              <input
+                id="utilityDueDay"
+                type="number"
+                min="1"
+                max="31"
+                value={localSettings.utilityDueDay}
+                onChange={(event) =>
+                  updateNumberSetting("utilityDueDay", event.target.value)
+                }
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="rentDueDay">Rent Due Day</label>
+              <input
+                id="rentDueDay"
+                type="number"
+                min="1"
+                max="31"
+                value={localSettings.rentDueDay}
+                onChange={(event) =>
+                  updateNumberSetting("rentDueDay", event.target.value)
+                }
+              />
+            </div>
           </div>
         </div>
 
-        <div className="settings-card">
-          <h3>Rent Defaults</h3>
-
-          <div className="form-group">
-            <label htmlFor="defaultMonthlyRent">Default Monthly Rent</label>
-            <input
-              id="defaultMonthlyRent"
-              type="number"
-              step="0.01"
-              value={settings.defaultMonthlyRent}
-              onChange={(event) =>
-                updateNumberSetting("defaultMonthlyRent", event.target.value)
-              }
-            />
-          </div>
+        <div className="settings-actions">
+          <button className="primary-button" type="submit">
+            Save Settings
+          </button>
         </div>
-
-        <div className="settings-card">
-          <h3>Due Dates</h3>
-
-          <div className="form-group">
-            <label htmlFor="utilityDueDay">Utility Due Day</label>
-            <input
-              id="utilityDueDay"
-              type="number"
-              min="1"
-              max="31"
-              value={settings.utilityDueDay}
-              onChange={(event) =>
-                updateNumberSetting("utilityDueDay", event.target.value)
-              }
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="rentDueDay">Rent Due Day</label>
-            <input
-              id="rentDueDay"
-              type="number"
-              min="1"
-              max="31"
-              value={settings.rentDueDay}
-              onChange={(event) =>
-                updateNumberSetting("rentDueDay", event.target.value)
-              }
-            />
-          </div>
-        </div>
-      </div>
+      </form>
     </section>
   );
 }

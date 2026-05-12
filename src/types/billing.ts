@@ -39,7 +39,14 @@ export type RentBill = {
   amountPaid: number;
 };
 
-export type Page = "dashboard" | "tenants" | "utility" | "rent" | "settings";
+export type Page =
+  | "dashboard"
+  | "tenants"
+  | "utility"
+  | "addUtility"
+  | "rent"
+  | "addRent"
+  | "settings";
 
 export type BillingSettings = {
   waterRate: number;

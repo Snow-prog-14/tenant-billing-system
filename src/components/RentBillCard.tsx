@@ -9,10 +9,15 @@ import {
 type RentBillCardProps = {
   tenant: Tenant;
   bill: RentBill;
+  onDeleteBill?: (billId: number) => void;
 };
 
-function RentBillCard({ tenant, bill }: RentBillCardProps) {
-  const billRef = useRef<HTMLElement>(null);
+function RentBillCard({
+  tenant,
+  bill,
+  onDeleteBill,
+}: RentBillCardProps) {
+    const billRef = useRef<HTMLElement>(null);
 
   const totalDue = calculateTotalRentDue(bill);
 
@@ -39,15 +44,24 @@ function RentBillCard({ tenant, bill }: RentBillCardProps) {
 
   return (
     <div className="bill-wrapper">
-      <div className="bill-actions">
-        <button className="secondary-button" onClick={handlePrint}>
-          Print
-        </button>
+    <div className="bill-actions">
+  <button className="secondary-button" onClick={handlePrint}>
+    Print
+  </button>
 
-        <button className="primary-button" onClick={handleSaveAsPhoto}>
-          Save as Photo
-        </button>
-      </div>
+  <button className="primary-button" onClick={handleSaveAsPhoto}>
+    Save as Photo
+  </button>
+
+  {onDeleteBill && (
+    <button
+      className="danger-button"
+      onClick={() => onDeleteBill(bill.id)}
+    >
+      Delete
+    </button>
+  )}
+</div>
 
       <section className="modern-bill-card" ref={billRef}>
         <div className="modern-bill-header rent-header">

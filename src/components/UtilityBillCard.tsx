@@ -13,10 +13,15 @@ import {
 type UtilityBillCardProps = {
   tenant: Tenant;
   bill: UtilityBill;
+  onDeleteBill?: (billId: number) => void;
 };
 
-function UtilityBillCard({ tenant, bill }: UtilityBillCardProps) {
-  const billRef = useRef<HTMLElement>(null);
+function UtilityBillCard({
+  tenant,
+  bill,
+  onDeleteBill,
+}: UtilityBillCardProps) {
+    const billRef = useRef<HTMLElement>(null);
 
   const waterConsumption = calculateWaterConsumption(bill);
   const waterBill = calculateWaterBill(bill);
@@ -50,14 +55,23 @@ function UtilityBillCard({ tenant, bill }: UtilityBillCardProps) {
   return (
     <div className="bill-wrapper">
       <div className="bill-actions">
-        <button className="secondary-button" onClick={handlePrint}>
-          Print
-        </button>
+  <button className="secondary-button" onClick={handlePrint}>
+    Print
+  </button>
 
-        <button className="primary-button" onClick={handleSaveAsPhoto}>
-          Save as Photo
-        </button>
-      </div>
+  <button className="primary-button" onClick={handleSaveAsPhoto}>
+    Save as Photo
+  </button>
+
+  {onDeleteBill && (
+    <button
+      className="danger-button"
+      onClick={() => onDeleteBill(bill.id)}
+    >
+      Delete
+    </button>
+  )}
+</div>
 
       <section className="modern-bill-card" ref={billRef}>
         <div className="modern-bill-header utility-header">

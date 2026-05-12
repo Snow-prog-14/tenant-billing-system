@@ -308,6 +308,232 @@ app.post("/api/utility-bills", async (req, res) => {
   }
 });
 
+app.get("/api/rent-bills", async (_req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        id,
+        tenant_id AS tenantId,
+        billing_period AS billingPeriod,
+        DATE_FORMAT(due_date, '%M %d, %Y') AS dueDate,
+        rent_amount AS rentAmount,
+        previous_unpaid_balance AS previousUnpaidBalance,
+        amount_paid AS amountPaid
+      FROM rent_bills
+      ORDER BY id DESC
+    `);
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch rent bills error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch rent bills",
+    });
+  }
+});
+
+app.post("/api/rent-bills", async (req, res) => {
+  try {
+    const {
+      tenantId,
+      billingPeriod,
+      dueDate,
+      rentAmount,
+      previousUnpaidBalance,
+      amountPaid,
+    } = req.body;
+
+    if (!tenantId || !billingPeriod || !dueDate || rentAmount === undefined) {
+      return res.status(400).json({
+        message: "Required rent bill fields are missing",
+      });
+    }
+
+    const [result] = await db.query(
+      `
+      INSERT INTO rent_bills (
+        tenant_id,
+        billing_period,
+        due_date,
+        rent_amount,
+        previous_unpaid_balance,
+        amount_paid
+      )
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [
+        tenantId,
+        billingPeriod,
+        dueDate,
+        rentAmount,
+        previousUnpaidBalance || 0,
+        amountPaid || 0,
+      ]
+    );
+
+    res.status(201).json({
+      message: "Rent bill added successfully",
+      result,
+    });
+  } catch (error) {
+    console.error("Add rent bill error:", error);
+
+    res.status(500).json({
+      message: "Failed to add rent bill",
+    });
+  }
+});
+
+app.delete("/api/utility-bills/:id", async (req, res) => {
+  try {
+    const billId = Number(req.params.id);
+
+    if (!billId) {
+      return res.status(400).json({
+        message: "Valid utility bill ID is required",
+      });
+    }
+
+    const [result] = await db.query(
+      `
+      DELETE FROM utility_bills
+      WHERE id = ?
+      `,
+      [billId]
+    );
+
+    res.json({
+      message: "Utility bill deleted successfully",
+      result,
+    });
+  } catch (error) {
+    console.error("Delete utility bill error:", error);
+
+    res.status(500).json({
+      message: "Failed to delete utility bill",
+    });
+  }
+});
+
+app.delete("/api/rent-bills/:id", async (req, res) => {
+  try {
+    const billId = Number(req.params.id);
+
+    if (!billId) {
+      return res.status(400).json({
+        message: "Valid rent bill ID is required",
+      });
+    }
+
+    const [result] = await db.query(
+      `
+      DELETE FROM rent_bills
+      WHERE id = ?
+      `,
+      [billId]
+    );
+
+    res.json({
+      message: "Rent bill deleted successfully",
+      result,
+    });
+  } catch (error) {
+    console.error("Delete rent bill error:", error);
+
+    res.status(500).json({
+      message: "Failed to delete rent bill",
+    });
+  }
+});
+
+app.get("/api/settings", async (_req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        id,
+        water_rate AS waterRate,
+        electric_rate AS electricRate,
+        default_monthly_rent AS defaultMonthlyRent,
+        utility_due_day AS utilityDueDay,
+        rent_due_day AS rentDueDay
+      FROM billing_settings
+      ORDER BY id ASC
+      LIMIT 1
+    `);
+
+    const settingsRows = rows as any[];
+
+    if (settingsRows.length === 0) {
+      return res.status(404).json({
+        message: "Settings not found",
+      });
+    }
+
+    res.json(settingsRows[0]);
+  } catch (error) {
+    console.error("Fetch settings error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch settings",
+    });
+  }
+});
+
+app.put("/api/settings", async (req, res) => {
+  try {
+    const {
+      waterRate,
+      electricRate,
+      defaultMonthlyRent,
+      utilityDueDay,
+      rentDueDay,
+    } = req.body;
+
+    if (
+      waterRate === undefined ||
+      electricRate === undefined ||
+      defaultMonthlyRent === undefined ||
+      utilityDueDay === undefined ||
+      rentDueDay === undefined
+    ) {
+      return res.status(400).json({
+        message: "All settings fields are required",
+      });
+    }
+
+    await db.query(
+      `
+      UPDATE billing_settings
+      SET
+        water_rate = ?,
+        electric_rate = ?,
+        default_monthly_rent = ?,
+        utility_due_day = ?,
+        rent_due_day = ?
+      WHERE id = 1
+      `,
+      [
+        waterRate,
+        electricRate,
+        defaultMonthlyRent,
+        utilityDueDay,
+        rentDueDay,
+      ]
+    );
+
+    res.json({
+      message: "Settings updated successfully",
+    });
+  } catch (error) {
+    console.error("Update settings error:", error);
+
+    res.status(500).json({
+      message: "Failed to update settings",
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
