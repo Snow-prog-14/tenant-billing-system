@@ -1,36 +1,43 @@
 import { useEffect, useState } from "react";
+import AddRentBillForm from "./components/AddRentBillForm";
+import AddUtilityBillForm from "./components/AddUtilityBillForm";
 import RentBillCard from "./components/RentBillCard";
 import Sidebar from "./components/Sidebar";
 import UtilityBillCard from "./components/UtilityBillCard";
 import SettingsPage from "./pages/SettingsPage";
+import TenantDetailsPage from "./pages/TenantDetailsPage";
 import TenantsPage from "./pages/TenantsPage";
 import type {
   BillingSettings,
   Page,
+  Payment,
   RentBill,
   Tenant,
   UtilityBill,
 } from "./types/billing";
 import {
-  calculateTotalRentDue,
-  calculateTotalUtilityDue,
+  calculateElectricBill,
+  calculateWaterBill,
   formatPeso,
 } from "./utils/billingCalculations";
-import AddUtilityBillForm from "./components/AddUtilityBillForm";
-import AddRentBillForm from "./components/AddRentBillForm";
-import TenantDetailsPage from "./pages/TenantDetailsPage";
 
 const API_URL = "http://localhost:5000/api";
 
 function App() {
   const [activePage, setActivePage] = useState<Page>("dashboard");
+
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [isLoadingTenants, setIsLoadingTenants] = useState(true);
   const [utilityBills, setUtilityBills] = useState<UtilityBill[]>([]);
-  const [isLoadingUtilityBills, setIsLoadingUtilityBills] = useState(true);
   const [rentBills, setRentBills] = useState<RentBill[]>([]);
-const [isLoadingRentBills, setIsLoadingRentBills] = useState(true);
-const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+
+  const [isLoadingTenants, setIsLoadingTenants] = useState(true);
+  const [isLoadingUtilityBills, setIsLoadingUtilityBills] = useState(true);
+  const [isLoadingRentBills, setIsLoadingRentBills] = useState(true);
+  const [isLoadingPayments, setIsLoadingPayments] = useState(true);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+
+  const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
 
   const [settings, setSettings] = useState<BillingSettings>({
     waterRate: 42.6,
@@ -40,9 +47,14 @@ const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
     rentDueDay: 5,
   });
 
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
-
   useEffect(() => {
+    fetchSettings();
+    fetchTenants();
+    fetchUtilityBills();
+    fetchRentBills();
+    fetchPayments();
+  }, []);
+
   async function fetchSettings() {
     try {
       const response = await fetch(`${API_URL}/settings`);
@@ -68,32 +80,24 @@ const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
     }
   }
 
-  fetchSettings();
-}, []);
+  async function fetchTenants() {
+    try {
+      const response = await fetch(`${API_URL}/tenants`);
 
-  useEffect(() => {
-    async function fetchTenants() {
-      try {
-        const response = await fetch(`${API_URL}/tenants`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch tenants");
-        }
-
-        const data: Tenant[] = await response.json();
-        setTenants(data);
-      } catch (error) {
-        console.error(error);
-        alert("Could not load tenants from database.");
-      } finally {
-        setIsLoadingTenants(false);
+      if (!response.ok) {
+        throw new Error("Failed to fetch tenants");
       }
+
+      const data: Tenant[] = await response.json();
+      setTenants(data);
+    } catch (error) {
+      console.error(error);
+      alert("Could not load tenants from database.");
+    } finally {
+      setIsLoadingTenants(false);
     }
+  }
 
-    fetchTenants();
-  }, []);
-
-  useEffect(() => {
   async function fetchUtilityBills() {
     try {
       const response = await fetch(`${API_URL}/utility-bills`);
@@ -126,10 +130,6 @@ const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
     }
   }
 
-  fetchUtilityBills();
-}, []);
-
-useEffect(() => {
   async function fetchRentBills() {
     try {
       const response = await fetch(`${API_URL}/rent-bills`);
@@ -156,8 +156,68 @@ useEffect(() => {
     }
   }
 
-  fetchRentBills();
-}, []);
+  async function fetchPayments() {
+    try {
+      const response = await fetch(`${API_URL}/payments`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch payments");
+      }
+
+      const data: Payment[] = await response.json();
+
+      const convertedData = data.map((payment) => ({
+        ...payment,
+        amount: Number(payment.amount),
+      }));
+
+      setPayments(convertedData);
+    } catch (error) {
+      console.error(error);
+      alert("Could not load payments from database.");
+    } finally {
+      setIsLoadingPayments(false);
+    }
+  }
+
+  function getPaymentsForBill(
+    billType: Payment["billType"],
+    billId: number
+  ): Payment[] {
+    return payments.filter(
+      (payment) => payment.billType === billType && payment.billId === billId
+    );
+  }
+
+  function getPaymentTotal(
+    billType: Payment["billType"],
+    billId: number
+  ): number {
+    return getPaymentsForBill(billType, billId).reduce(
+      (sum, payment) => sum + Number(payment.amount),
+      0
+    );
+  }
+
+  const totalUtilityDue = utilityBills.reduce((sum, bill) => {
+    const electricAmount = calculateElectricBill(bill);
+    const waterAmount = calculateWaterBill(bill);
+
+    const electricPaid = getPaymentTotal("utility_electric", bill.id);
+    const waterPaid = getPaymentTotal("utility_water", bill.id);
+
+    const electricBalance = Math.max(electricAmount - electricPaid, 0);
+    const waterBalance = Math.max(waterAmount - waterPaid, 0);
+
+    return sum + electricBalance + waterBalance;
+  }, 0);
+
+  const totalRentDue = rentBills.reduce((sum, bill) => {
+    const rentPaid = getPaymentTotal("rent", bill.id);
+    const rentBalance = Math.max(Number(bill.rentAmount) - rentPaid, 0);
+
+    return sum + rentBalance;
+  }, 0);
 
   async function handleAddTenant(tenant: Tenant) {
     try {
@@ -178,211 +238,248 @@ useEffect(() => {
         throw new Error("Failed to add tenant");
       }
 
-      const tenantsResponse = await fetch(`${API_URL}/tenants`);
-      const updatedTenants: Tenant[] = await tenantsResponse.json();
-
-      setTenants(updatedTenants);
+      await fetchTenants();
     } catch (error) {
       console.error(error);
       alert("Could not add tenant to database.");
     }
   }
 
-  async function handleUpdateSettings(updatedSettings: BillingSettings) {
-  try {
-    setSettings(updatedSettings);
-
-    const response = await fetch(`${API_URL}/settings`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(updatedSettings),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to update settings");
-    }
-  } catch (error) {
-    console.error(error);
-    alert("Could not save settings to database.");
-  }
-}
-
-async function handleDeleteTenant(tenantId: number) {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this tenant?"
-  );
-
-  if (!confirmDelete) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/tenants/${tenantId}`, {
-      method: "DELETE",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Delete failed response:", errorText);
-
-      throw new Error(
-        `Failed to delete tenant. Server returned status ${response.status}.`
-      );
-    }
-
-    setTenants((currentTenants) =>
-      currentTenants.filter((tenant) => tenant.id !== tenantId)
+  async function handleDeleteTenant(tenantId: number) {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this tenant?"
     );
-  } catch (error) {
-    console.error(error);
 
-    if (error instanceof Error) {
-      alert(error.message);
-    } else {
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/tenants/${tenantId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete tenant");
+      }
+
+      setTenants((currentTenants) =>
+        currentTenants.filter((tenant) => tenant.id !== tenantId)
+      );
+
+      setUtilityBills((currentBills) =>
+        currentBills.filter((bill) => bill.tenantId !== tenantId)
+      );
+
+      setRentBills((currentBills) =>
+        currentBills.filter((bill) => bill.tenantId !== tenantId)
+      );
+
+      setPayments((currentPayments) =>
+        currentPayments.filter((payment) => payment.tenantId !== tenantId)
+      );
+
+      if (selectedTenantId === tenantId) {
+        setSelectedTenantId(null);
+        setActivePage("tenants");
+      }
+    } catch (error) {
+      console.error(error);
       alert("Could not delete tenant from database.");
     }
   }
-}
 
-async function handleAddUtilityBill(bill: Omit<UtilityBill, "id">) {
-  try {
-    const response = await fetch(`${API_URL}/utility-bills`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(bill),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to add utility bill");
-    }
-
-    const utilityBillsResponse = await fetch(`${API_URL}/utility-bills`);
-    const updatedUtilityBills: UtilityBill[] =
-      await utilityBillsResponse.json();
-
-    const convertedData = updatedUtilityBills.map((bill) => ({
-      ...bill,
-      previousWaterReading: Number(bill.previousWaterReading),
-      currentWaterReading: Number(bill.currentWaterReading),
-      waterRate: Number(bill.waterRate),
-      previousElectricReading: Number(bill.previousElectricReading),
-      currentElectricReading: Number(bill.currentElectricReading),
-      electricRate: Number(bill.electricRate),
-      additionalCharges: Number(bill.additionalCharges),
-      previousUnpaidBalance: Number(bill.previousUnpaidBalance),
-      amountPaid: Number(bill.amountPaid),
-    }));
-
-    setUtilityBills(convertedData);
-  } catch (error) {
-    console.error(error);
-    alert("Could not add utility bill to database.");
-  }
-}
-
-async function handleAddRentBill(bill: Omit<RentBill, "id">) {
-  try {
-    const response = await fetch(`${API_URL}/rent-bills`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(bill),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to add rent bill");
-    }
-
-    const rentBillsResponse = await fetch(`${API_URL}/rent-bills`);
-    const updatedRentBills: RentBill[] = await rentBillsResponse.json();
-
-    const convertedData = updatedRentBills.map((bill) => ({
-      ...bill,
-      rentAmount: Number(bill.rentAmount),
-      previousUnpaidBalance: Number(bill.previousUnpaidBalance),
-      amountPaid: Number(bill.amountPaid),
-    }));
-
-    setRentBills(convertedData);
-  } catch (error) {
-    console.error(error);
-    alert("Could not add rent bill to database.");
-  }
-}
-
-async function handleDeleteUtilityBill(billId: number) {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this utility bill?"
-  );
-
-  if (!confirmDelete) {
-    return;
+  function handleViewTenant(tenantId: number) {
+    setSelectedTenantId(tenantId);
+    setActivePage("tenantDetails");
   }
 
-  try {
-    const response = await fetch(`${API_URL}/utility-bills/${billId}`, {
-      method: "DELETE",
-    });
+  async function handleAddUtilityBill(bill: Omit<UtilityBill, "id">) {
+    try {
+      const response = await fetch(`${API_URL}/utility-bills`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bill),
+      });
 
-    if (!response.ok) {
-      throw new Error("Failed to delete utility bill");
+      if (!response.ok) {
+        throw new Error("Failed to add utility bill");
+      }
+
+      await fetchUtilityBills();
+    } catch (error) {
+      console.error(error);
+      alert("Could not add utility bill to database.");
     }
+  }
 
-    setUtilityBills((currentBills) =>
-      currentBills.filter((bill) => bill.id !== billId)
+  async function handleDeleteUtilityBill(billId: number) {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this utility bill?"
     );
-  } catch (error) {
-    console.error(error);
-    alert("Could not delete utility bill from database.");
-  }
-}
 
-async function handleDeleteRentBill(billId: number) {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this rent bill?"
-  );
-
-  if (!confirmDelete) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/rent-bills/${billId}`, {
-      method: "DELETE",
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to delete rent bill");
+    if (!confirmDelete) {
+      return;
     }
 
-    setRentBills((currentBills) =>
-      currentBills.filter((bill) => bill.id !== billId)
-    );
-  } catch (error) {
-    console.error(error);
-    alert("Could not delete rent bill from database.");
+    try {
+      const response = await fetch(`${API_URL}/utility-bills/${billId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete utility bill");
+      }
+
+      setUtilityBills((currentBills) =>
+        currentBills.filter((bill) => bill.id !== billId)
+      );
+
+      setPayments((currentPayments) =>
+        currentPayments.filter(
+          (payment) =>
+            !(
+              payment.billId === billId &&
+              (payment.billType === "utility_electric" ||
+                payment.billType === "utility_water")
+            )
+        )
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Could not delete utility bill from database.");
+    }
   }
-}
 
- function handleViewTenant(tenantId: number) {
-  setSelectedTenantId(tenantId);
-  setActivePage("tenantDetails");
-}
+  async function handleAddRentBill(bill: Omit<RentBill, "id">) {
+    try {
+      const response = await fetch(`${API_URL}/rent-bills`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bill),
+      });
 
- const totalUtilityDue = utilityBills.reduce(
-  (sum, bill) => sum + calculateTotalUtilityDue(bill),
-  0
-);
+      if (!response.ok) {
+        throw new Error("Failed to add rent bill");
+      }
 
-  const totalRentDue = rentBills.reduce(
-    (sum, bill) => sum + calculateTotalRentDue(bill),
-    0
-  );
+      await fetchRentBills();
+    } catch (error) {
+      console.error(error);
+      alert("Could not add rent bill to database.");
+    }
+  }
+
+  async function handleDeleteRentBill(billId: number) {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this rent bill?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/rent-bills/${billId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete rent bill");
+      }
+
+      setRentBills((currentBills) =>
+        currentBills.filter((bill) => bill.id !== billId)
+      );
+
+      setPayments((currentPayments) =>
+        currentPayments.filter(
+          (payment) =>
+            !(payment.billId === billId && payment.billType === "rent")
+        )
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Could not delete rent bill from database.");
+    }
+  }
+
+  async function handleAddPayment(payment: Omit<Payment, "id">) {
+    try {
+      const response = await fetch(`${API_URL}/payments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payment),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add payment");
+      }
+
+      await fetchPayments();
+    } catch (error) {
+      console.error(error);
+      alert("Could not add payment to database.");
+    }
+  }
+
+  async function handleDeletePayment(paymentId: number) {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this payment?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/payments/${paymentId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete payment");
+      }
+
+      setPayments((currentPayments) =>
+        currentPayments.filter((payment) => payment.id !== paymentId)
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Could not delete payment from database.");
+    }
+  }
+
+  async function handleUpdateSettings(updatedSettings: BillingSettings) {
+    try {
+      setSettings(updatedSettings);
+
+      const response = await fetch(`${API_URL}/settings`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedSettings),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update settings");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Could not save settings to database.");
+    }
+  }
+
+  const selectedTenant = selectedTenantId
+    ? tenants.find((tenant) => tenant.id === selectedTenantId)
+    : null;
 
   return (
     <div className="app-layout">
@@ -401,13 +498,13 @@ async function handleDeleteRentBill(billId: number) {
                 <p className="eyebrow">Overview</p>
                 <h2>Dashboard</h2>
                 <p>
-                  Track tenants, rent balances, and monthly utility collections
-                  in one place.
+                  Track tenants, rent balances, utility collections, and partial
+                  payments in one place.
                 </p>
               </div>
 
               <div className="hero-total">
-                <span>Total Collection</span>
+                <span>Total Balance</span>
                 <strong>{formatPeso(totalUtilityDue + totalRentDue)}</strong>
               </div>
             </div>
@@ -422,238 +519,236 @@ async function handleDeleteRentBill(billId: number) {
 
               <div className="dashboard-card utility-card">
                 <div className="dashboard-card-icon">⚡</div>
-                <span>Total Utility Due</span>
+                <span>Total Utility Balance</span>
                 <strong>{formatPeso(totalUtilityDue)}</strong>
-                <p>Water and electricity balance</p>
+                <p>Remaining water and electricity balance</p>
               </div>
 
               <div className="dashboard-card rent-due-card">
                 <div className="dashboard-card-icon">⌂</div>
-                <span>Total Rent Due</span>
+                <span>Total Rent Balance</span>
                 <strong>{formatPeso(totalRentDue)}</strong>
-                <p>Monthly rent balance</p>
+                <p>Remaining rent balance</p>
               </div>
 
               <div className="dashboard-card collection-card">
                 <div className="dashboard-card-icon">₱</div>
-                <span>Total Collection</span>
+                <span>Total Balance</span>
                 <strong>{formatPeso(totalUtilityDue + totalRentDue)}</strong>
-                <p>Expected amount to collect</p>
+                <p>Total remaining amount to collect</p>
               </div>
             </div>
           </section>
         )}
 
-     {activePage === "tenants" && (
-  <TenantsPage
-    tenants={tenants}
-    onAddTenant={handleAddTenant}
-    onDeleteTenant={handleDeleteTenant}
-    onViewTenant={handleViewTenant}
-  />
-)}
+        {activePage === "tenants" && (
+          <TenantsPage
+            tenants={tenants}
+            onAddTenant={handleAddTenant}
+            onDeleteTenant={handleDeleteTenant}
+            onViewTenant={handleViewTenant}
+          />
+        )}
 
-{activePage === "tenantDetails" && selectedTenantId && (
-  <>
-    {(() => {
-      const selectedTenant = tenants.find(
-        (tenant) => tenant.id === selectedTenantId
-      );
+        {activePage === "tenantDetails" && (
+          <>
+            {selectedTenant ? (
+              <TenantDetailsPage
+                tenant={selectedTenant}
+                utilityBills={utilityBills}
+                rentBills={rentBills}
+                payments={payments}
+                onBack={() => setActivePage("tenants")}
+                onDeleteUtilityBill={handleDeleteUtilityBill}
+                onDeleteRentBill={handleDeleteRentBill}
+                onAddPayment={handleAddPayment}
+                onDeletePayment={handleDeletePayment}
+              />
+            ) : (
+              <section className="page-section">
+                <p>Tenant not found.</p>
+                <button
+                  className="secondary-button"
+                  onClick={() => setActivePage("tenants")}
+                >
+                  Back to Tenants
+                </button>
+              </section>
+            )}
+          </>
+        )}
 
-      if (!selectedTenant) {
-        return (
+        {activePage === "utility" && (
           <section className="page-section">
-            <p>Tenant not found.</p>
-            <button
-              className="secondary-button"
-              onClick={() => setActivePage("tenants")}
-            >
-              Back to Tenants
-            </button>
+            <div className="section-title-row">
+              <div>
+                <h2>Utility Bills</h2>
+                <p>Review monthly water and electricity bills.</p>
+              </div>
+
+              <button
+                className="primary-button"
+                onClick={() => setActivePage("addUtility")}
+              >
+                + Add Utility Bill
+              </button>
+            </div>
+
+            {isLoadingUtilityBills ? (
+              <p>Loading utility bills...</p>
+            ) : (
+              <div className="bill-grid">
+                {utilityBills.map((bill) => {
+                  const tenant = tenants.find(
+                    (tenant) => tenant.id === bill.tenantId
+                  );
+
+                  if (!tenant) {
+                    return null;
+                  }
+
+                  return (
+                    <UtilityBillCard
+                      key={bill.id}
+                      tenant={tenant}
+                      bill={bill}
+                      payments={payments}
+                      onDeleteBill={handleDeleteUtilityBill}
+                    />
+                  );
+                })}
+
+                {utilityBills.length === 0 && <p>No utility bills found.</p>}
+              </div>
+            )}
           </section>
-        );
-      }
+        )}
 
-      return (
-        <TenantDetailsPage
-          tenant={selectedTenant}
-          utilityBills={utilityBills}
-          rentBills={rentBills}
-          onBack={() => setActivePage("tenants")}
-          onDeleteUtilityBill={handleDeleteUtilityBill}
-          onDeleteRentBill={handleDeleteRentBill}
-        />
-      );
-    })()}
-  </>
-)}
+        {activePage === "addUtility" && (
+          <section className="page-section">
+            <div className="section-title-row">
+              <div>
+                <h2>Add Utility Bill</h2>
+                <p>Create a new monthly water and electricity bill.</p>
+              </div>
 
-    {activePage === "utility" && (
-  <section className="page-section">
-    <div className="section-title-row">
-      <div>
-        <h2>Utility Bills</h2>
-        <p>Review monthly water and electricity bills.</p>
-      </div>
+              <button
+                className="secondary-button"
+                onClick={() => setActivePage("utility")}
+              >
+                Back to Utility Bills
+              </button>
+            </div>
 
-      <button
-        className="primary-button"
-        onClick={() => setActivePage("addUtility")}
-      >
-        + Add Utility Bill
-      </button>
-    </div>
+            <div className="form-card">
+              <h3>New Utility Bill</h3>
 
-    {isLoadingUtilityBills ? (
-      <p>Loading utility bills...</p>
-    ) : (
-      <div className="bill-grid">
-{utilityBills.map((bill) => {          const tenant = tenants.find(
-            (tenant) => tenant.id === bill.tenantId
-          );
+              <AddUtilityBillForm
+                tenants={tenants}
+                utilityBills={utilityBills}
+                waterRate={settings.waterRate}
+                electricRate={settings.electricRate}
+                utilityDueDay={settings.utilityDueDay}
+                onAddUtilityBill={async (bill) => {
+                  await handleAddUtilityBill(bill);
+                  setActivePage("utility");
+                }}
+              />
+            </div>
+          </section>
+        )}
 
-          if (!tenant) {
-            return null;
-          }
+        {activePage === "rent" && (
+          <section className="page-section">
+            <div className="section-title-row">
+              <div>
+                <h2>Rent Bills</h2>
+                <p>Review monthly room rent bills.</p>
+              </div>
 
-          return (
-<UtilityBillCard
-  key={bill.id}
-  tenant={tenant}
-  bill={bill}
-  onDeleteBill={handleDeleteUtilityBill}
-/>          );
-        })}
+              <button
+                className="primary-button"
+                onClick={() => setActivePage("addRent")}
+              >
+                + Add Rent Bill
+              </button>
+            </div>
 
-       {utilityBills.length === 0 && (
-  <p>No utility bills found.</p>
-)}
-      </div>
-    )}
-  </section>
-)}
+            {isLoadingRentBills ? (
+              <p>Loading rent bills...</p>
+            ) : (
+              <div className="bill-grid">
+                {rentBills.map((bill) => {
+                  const tenant = tenants.find(
+                    (tenant) => tenant.id === bill.tenantId
+                  );
 
-{activePage === "addUtility" && (
-  <section className="page-section">
-    <div className="section-title-row">
-      <div>
-        <h2>Add Utility Bill</h2>
-        <p>Create a new monthly water and electricity bill.</p>
-      </div>
+                  if (!tenant) {
+                    return null;
+                  }
 
-      <button
-        className="secondary-button"
-        onClick={() => setActivePage("utility")}
-      >
-        Back to Utility Bills
-      </button>
-    </div>
+                  return (
+                    <RentBillCard
+                      key={bill.id}
+                      tenant={tenant}
+                      bill={bill}
+                      payments={payments}
+                      onDeleteBill={handleDeleteRentBill}
+                    />
+                  );
+                })}
 
-    <div className="form-card">
-      <h3>New Utility Bill</h3>
+                {rentBills.length === 0 && <p>No rent bills found.</p>}
+              </div>
+            )}
+          </section>
+        )}
 
-   <AddUtilityBillForm
-  tenants={tenants}
-  utilityBills={utilityBills}
-  waterRate={settings.waterRate}
-  electricRate={settings.electricRate}
-  utilityDueDay={settings.utilityDueDay}
-  onAddUtilityBill={async (bill) => {
-    await handleAddUtilityBill(bill);
-    setActivePage("utility");
-  }}
-/>
-    </div>
-  </section>
-)}
+        {activePage === "addRent" && (
+          <section className="page-section">
+            <div className="section-title-row">
+              <div>
+                <h2>Add Rent Bill</h2>
+                <p>Create a new monthly rent bill.</p>
+              </div>
 
-   {activePage === "rent" && (
-  <section className="page-section">
-    <div className="section-title-row">
-      <div>
-        <h2>Rent Bills</h2>
-        <p>Review monthly room rent bills.</p>
-      </div>
+              <button
+                className="secondary-button"
+                onClick={() => setActivePage("rent")}
+              >
+                Back to Rent Bills
+              </button>
+            </div>
 
-      <button
-        className="primary-button"
-        onClick={() => setActivePage("addRent")}
-      >
-        + Add Rent Bill
-      </button>
-    </div>
+            <div className="form-card">
+              <h3>New Rent Bill</h3>
 
-    {isLoadingRentBills ? (
-      <p>Loading rent bills...</p>
-    ) : (
-      <div className="bill-grid">
-        {rentBills.map((bill) => {
-          const tenant = tenants.find(
-            (tenant) => tenant.id === bill.tenantId
-          );
+              <AddRentBillForm
+                tenants={tenants}
+                rentDueDay={settings.rentDueDay}
+                onAddRentBill={async (bill) => {
+                  await handleAddRentBill(bill);
+                  setActivePage("rent");
+                }}
+              />
+            </div>
+          </section>
+        )}
 
-          if (!tenant) {
-            return null;
-          }
+        {activePage === "settings" && (
+          <>
+            {isLoadingSettings ? (
+              <p>Loading settings...</p>
+            ) : (
+              <SettingsPage
+                settings={settings}
+                onUpdateSettings={handleUpdateSettings}
+              />
+            )}
+          </>
+        )}
 
-          return (
-<RentBillCard
-  key={bill.id}
-  tenant={tenant}
-  bill={bill}
-  onDeleteBill={handleDeleteRentBill}
-/>          );
-        })}
-
-        {rentBills.length === 0 && <p>No rent bills found.</p>}
-      </div>
-    )}
-  </section>
-)}
-
-{activePage === "addRent" && (
-  <section className="page-section">
-    <div className="section-title-row">
-      <div>
-        <h2>Add Rent Bill</h2>
-        <p>Create a new monthly rent bill.</p>
-      </div>
-
-      <button
-        className="secondary-button"
-        onClick={() => setActivePage("rent")}
-      >
-        Back to Rent Bills
-      </button>
-    </div>
-
-    <div className="form-card">
-      <h3>New Rent Bill</h3>
-
-      <AddRentBillForm
-        tenants={tenants}
-        rentDueDay={settings.rentDueDay}
-        onAddRentBill={async (bill) => {
-          await handleAddRentBill(bill);
-          setActivePage("rent");
-        }}
-      />
-    </div>
-  </section>
-)}
-
-       {activePage === "settings" && (
-  <>
-    {isLoadingSettings ? (
-      <p>Loading settings...</p>
-    ) : (
-      <SettingsPage
-        settings={settings}
-        onUpdateSettings={handleUpdateSettings}
-      />
-    )}
-  </>
-)}
+        {isLoadingPayments && <span className="sr-only">Loading payments...</span>}
       </main>
     </div>
   );

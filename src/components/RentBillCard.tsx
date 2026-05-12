@@ -1,25 +1,26 @@
 import { useRef } from "react";
 import { toPng } from "html-to-image";
-import type { RentBill, Tenant } from "../types/billing";
-import {
-  calculateTotalRentDue,
-  formatPeso,
-} from "../utils/billingCalculations";
+import type { Payment, RentBill, Tenant } from "../types/billing";
+import { formatPeso } from "../utils/billingCalculations";
 
 type RentBillCardProps = {
   tenant: Tenant;
   bill: RentBill;
+  payments: Payment[];
   onDeleteBill?: (billId: number) => void;
 };
 
 function RentBillCard({
   tenant,
   bill,
+  payments,
   onDeleteBill,
 }: RentBillCardProps) {
     const billRef = useRef<HTMLElement>(null);
 
-  const totalDue = calculateTotalRentDue(bill);
+  const rentPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalBill = bill.rentAmount + bill.previousUnpaidBalance;
+  const totalDue = totalBill - rentPaid;
 
   function handlePrint() {
     window.print();
@@ -99,25 +100,46 @@ function RentBillCard({
               <span>Monthly Rent</span>
               <strong>{formatPeso(bill.rentAmount)}</strong>
             </div>
+            <div className="modern-row">
+              <span>Rent Paid</span>
+              <strong className="paid-text">{formatPeso(rentPaid)}</strong>
+            </div>
+            <div className="modern-row">
+              <span>Rent Balance</span>
+              <strong>{formatPeso(bill.rentAmount - rentPaid)}</strong>
+            </div>
           </div>
 
-          <div className="modern-section">
+          <div className="modern-section payment-history-section">
             <div className="modern-section-title">
-              <h3>Payment and Balance</h3>
+              <h3>Payment History</h3>
             </div>
-
-            <div className="modern-row">
-              <span>Previous Unpaid Balance</span>
-              <strong>{formatPeso(bill.previousUnpaidBalance)}</strong>
-            </div>
-            <div className="modern-row">
-              <span>Amount Paid</span>
-              <strong>{formatPeso(bill.amountPaid)}</strong>
-            </div>
+            {payments.length > 0 ? (
+              <table className="receipt-history-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.sort((a,b) => b.datePaid.localeCompare(a.datePaid)).map(p => (
+                    <tr key={p.id}>
+                      <td>{p.datePaid}</td>
+                      <td>{formatPeso(p.amount)}</td>
+                      <td>{p.notes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>No payments recorded yet.</p>
+            )}
           </div>
 
           <div className="modern-total">
-            <span>Total Amount Due</span>
+            <span>Total Remaining Balance</span>
             <strong>{formatPeso(totalDue)}</strong>
           </div>
         </div>

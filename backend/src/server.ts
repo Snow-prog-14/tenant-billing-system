@@ -62,56 +62,6 @@ app.get("/api/tenants", async (_req, res) => {
 });
 
 app.post("/api/tenants", async (req, res) => {
-
- app.delete("/api/tenants/:id", async (req, res) => {
-  try {
-    const tenantId = Number(req.params.id);
-
-    if (!tenantId) {
-      return res.status(400).json({
-        message: "Valid tenant ID is required",
-      });
-    }
-
-    // Delete related bills first, because MySQL enjoys being strict.
-    await db.query(
-      `
-      DELETE FROM utility_bills
-      WHERE tenant_id = ?
-      `,
-      [tenantId]
-    );
-
-    await db.query(
-      `
-      DELETE FROM rent_bills
-      WHERE tenant_id = ?
-      `,
-      [tenantId]
-    );
-
-    const [result] = await db.query(
-      `
-      DELETE FROM tenants
-      WHERE id = ?
-      `,
-      [tenantId]
-    );
-
-    res.json({
-      message: "Tenant deleted successfully",
-      result,
-    });
-  } catch (error) {
-    console.error("Delete tenant error:", error);
-
-    res.status(500).json({
-      message: "Failed to delete tenant",
-      error,
-    });
-  }
-});
-
   try {
     const { name, roomNo, monthlyRent, status } = req.body;
 
@@ -152,6 +102,7 @@ app.delete("/api/tenants/:id", async (req, res) => {
       });
     }
 
+    // Delete related bills and payments
     await db.query(
       `
       DELETE FROM utility_bills
@@ -163,6 +114,14 @@ app.delete("/api/tenants/:id", async (req, res) => {
     await db.query(
       `
       DELETE FROM rent_bills
+      WHERE tenant_id = ?
+      `,
+      [tenantId]
+    );
+
+    await db.query(
+      `
+      DELETE FROM payments
       WHERE tenant_id = ?
       `,
       [tenantId]
@@ -413,6 +372,15 @@ app.delete("/api/utility-bills/:id", async (req, res) => {
       [billId]
     );
 
+    // Delete related payments
+    await db.query(
+      `
+      DELETE FROM payments
+      WHERE bill_id = ? AND bill_type IN ('utility_electric', 'utility_water')
+      `,
+      [billId]
+    );
+
     res.json({
       message: "Utility bill deleted successfully",
       result,
@@ -440,6 +408,15 @@ app.delete("/api/rent-bills/:id", async (req, res) => {
       `
       DELETE FROM rent_bills
       WHERE id = ?
+      `,
+      [billId]
+    );
+
+    // Delete related payments
+    await db.query(
+      `
+      DELETE FROM payments
+      WHERE bill_id = ? AND bill_type = 'rent'
       `,
       [billId]
     );
@@ -541,6 +518,84 @@ app.put("/api/settings", async (req, res) => {
     res.status(500).json({
       message: "Failed to update settings",
     });
+  }
+});
+
+app.get("/api/payments", async (_req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        id,
+        tenant_id AS tenantId,
+        bill_type AS billType,
+        bill_id AS billId,
+        amount,
+        DATE_FORMAT(date_paid, '%Y-%m-%d') AS datePaid,
+        notes
+      FROM payments
+      ORDER BY id DESC
+    `);
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch payments error:", error);
+    res.status(500).json({ message: "Failed to fetch payments" });
+  }
+});
+
+app.get("/api/payments/tenant/:tenantId", async (req, res) => {
+  try {
+    const tenantId = Number(req.params.tenantId);
+    const [rows] = await db.query(
+      `
+      SELECT
+        id,
+        tenant_id AS tenantId,
+        bill_type AS billType,
+        bill_id AS billId,
+        amount,
+        DATE_FORMAT(date_paid, '%Y-%m-%d') AS datePaid,
+        notes
+      FROM payments
+      WHERE tenant_id = ?
+      ORDER BY id DESC
+    `,
+      [tenantId]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch tenant payments error:", error);
+    res.status(500).json({ message: "Failed to fetch tenant payments" });
+  }
+});
+
+app.post("/api/payments", async (req, res) => {
+  try {
+    const { tenantId, billType, billId, amount, datePaid, notes } = req.body;
+    if (!tenantId || !billType || !billId || amount === undefined || !datePaid) {
+      return res.status(400).json({ message: "Missing required payment fields" });
+    }
+    const [result] = await db.query(
+      `
+      INSERT INTO payments (tenant_id, bill_type, bill_id, amount, date_paid, notes)
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [tenantId, billType, billId, amount, datePaid, notes || null]
+    );
+    res.status(201).json({ message: "Payment added successfully", result });
+  } catch (error) {
+    console.error("Add payment error:", error);
+    res.status(500).json({ message: "Failed to add payment" });
+  }
+});
+
+app.delete("/api/payments/:id", async (req, res) => {
+  try {
+    const paymentId = Number(req.params.id);
+    await db.query("DELETE FROM payments WHERE id = ?", [paymentId]);
+    res.json({ message: "Payment deleted successfully" });
+  } catch (error) {
+    console.error("Delete payment error:", error);
+    res.status(500).json({ message: "Failed to delete payment" });
   }
 });
 

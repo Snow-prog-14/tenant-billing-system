@@ -185,6 +185,8 @@ waterPaidDate: waterPaidDate || null,
     setAdditionalCharges("0");
     setPreviousUnpaidBalance("0");
     setAmountPaid("0");
+    setElectricPaidDate("");
+    setWaterPaidDate("");
   }
 
   return (
@@ -380,6 +382,26 @@ waterPaidDate: waterPaidDate || null,
               step="0.01"
               value={amountPaid}
               onChange={(event) => setAmountPaid(event.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="electricPaidDate">Electric Date Paid</label>
+            <input
+              id="electricPaidDate"
+              type="date"
+              value={electricPaidDate}
+              onChange={(event) => setElectricPaidDate(event.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="waterPaidDate">Water Date Paid</label>
+            <input
+              id="waterPaidDate"
+              type="date"
+              value={waterPaidDate}
+              onChange={(event) => setWaterPaidDate(event.target.value)}
             />
           </div>
 

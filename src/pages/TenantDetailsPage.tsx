@@ -1,14 +1,10 @@
 import { useMemo, useState } from "react";
 import RentBillCard from "../components/RentBillCard";
 import UtilityBillCard from "../components/UtilityBillCard";
-import type { RentBill, Tenant, UtilityBill } from "../types/billing";
+import type { Payment, RentBill, Tenant, UtilityBill } from "../types/billing";
 import {
   calculateElectricBill,
-  calculateElectricConsumption,
-  calculateTotalRentDue,
-  calculateTotalUtilityDue,
   calculateWaterBill,
-  calculateWaterConsumption,
   formatPeso,
 } from "../utils/billingCalculations";
 
@@ -16,9 +12,12 @@ type TenantDetailsPageProps = {
   tenant: Tenant;
   utilityBills: UtilityBill[];
   rentBills: RentBill[];
+  payments: Payment[];
   onBack: () => void;
   onDeleteUtilityBill: (billId: number) => void;
   onDeleteRentBill: (billId: number) => void;
+  onAddPayment: (payment: Omit<Payment, "id">) => void;
+  onDeletePayment: (paymentId: number) => void;
 };
 
 type SelectedReceipt =
@@ -97,19 +96,26 @@ function getMonthLabelFromBillingPeriod(period: string) {
   });
 }
 
-function formatPaidStatus(amountPaid: number) {
-  return Number(amountPaid) > 0 ? "Paid" : "";
-}
 
 function TenantDetailsPage({
   tenant,
   utilityBills,
   rentBills,
+  payments,
   onBack,
   onDeleteUtilityBill,
   onDeleteRentBill,
+  onAddPayment,
+  onDeletePayment,
 }: TenantDetailsPageProps) {
   const [selectedReceipt, setSelectedReceipt] = useState<SelectedReceipt>(null);
+  const [activePaymentRow, setActivePaymentRow] = useState<string | null>(null);
+
+  // Payment form state
+  const [payType, setPayType] = useState<Payment["billType"]>("rent");
+  const [payAmount, setPayAmount] = useState("");
+  const [payDate, setPayDate] = useState(new Date().toISOString().split("T")[0]);
+  const [payNotes, setPayNotes] = useState("");
 
   const tenantUtilityBills = useMemo(() => {
     return utilityBills
@@ -158,15 +164,58 @@ function TenantDetailsPage({
     );
   }, [tenantUtilityBills, tenantRentBills]);
 
-  const totalUtilityDue = tenantUtilityBills.reduce(
-    (sum, bill) => sum + calculateTotalUtilityDue(bill),
-    0
-  );
+  const getPaymentsForBill = (type: Payment["billType"], id: number) =>
+    payments.filter((p) => p.billType === type && p.billId === id);
 
-  const totalRentDue = tenantRentBills.reduce(
-    (sum, bill) => sum + calculateTotalRentDue(bill),
-    0
-  );
+  const sumPayments = (pList: Payment[]) =>
+    pList.reduce((sum, p) => sum + p.amount, 0);
+
+  const getStatusDisplay = (total: number, paid: number, pList: Payment[]) => {
+    if (total <= 0) return "";
+    if (paid >= total) {
+      const latestDate = pList.length > 0 
+        ? pList.sort((a, b) => b.datePaid.localeCompare(a.datePaid))[0].datePaid
+        : "";
+      return latestDate ? `Paid (${latestDate})` : "Fully Paid";
+    }
+    if (paid > 0) return "Partial";
+    return "Unpaid";
+  };
+
+  // Calculate total balance across all bills
+  const totalBalance = useMemo(() => {
+    let balance = 0;
+    tenantUtilityBills.forEach(bill => {
+      const elec = calculateElectricBill(bill);
+      const water = calculateWaterBill(bill);
+      const elecPaid = sumPayments(getPaymentsForBill("utility_electric", bill.id));
+      const waterPaid = sumPayments(getPaymentsForBill("utility_water", bill.id));
+      balance += (elec - elecPaid) + (water - waterPaid);
+    });
+    tenantRentBills.forEach(bill => {
+      const rentPaid = sumPayments(getPaymentsForBill("rent", bill.id));
+      balance += (bill.rentAmount - rentPaid);
+    });
+    return balance;
+  }, [tenantUtilityBills, tenantRentBills, payments]);
+
+  const handlePaymentSubmit = (e: React.FormEvent, row: LedgerRow) => {
+    e.preventDefault();
+    const billId = payType === "rent" ? row.rentBill?.id : row.utilityBill?.id;
+    if (!billId || !payAmount) return;
+
+    onAddPayment({
+      tenantId: tenant.id,
+      billType: payType,
+      billId,
+      amount: Number(payAmount),
+      datePaid: payDate,
+      notes: payNotes,
+    });
+
+    setPayAmount("");
+    setPayNotes("");
+  };
 
   const selectedUtilityReceipt =
     selectedReceipt?.type === "utility"
@@ -196,33 +245,7 @@ function TenantDetailsPage({
 
         <div className="tenant-balance-card">
           <span>Total Balance</span>
-          <strong>{formatPeso(totalUtilityDue + totalRentDue)}</strong>
-        </div>
-      </div>
-
-      <div className="tenant-summary-grid compact-summary">
-        <div className="dashboard-card">
-          <span>Total Utility Due</span>
-          <strong>{formatPeso(totalUtilityDue)}</strong>
-          <p>Water and electricity balance</p>
-        </div>
-
-        <div className="dashboard-card">
-          <span>Total Rent Due</span>
-          <strong>{formatPeso(totalRentDue)}</strong>
-          <p>Rent balance</p>
-        </div>
-
-        <div className="dashboard-card">
-          <span>Utility Records</span>
-          <strong>{tenantUtilityBills.length}</strong>
-          <p>Monthly utility bills</p>
-        </div>
-
-        <div className="dashboard-card">
-          <span>Rent Records</span>
-          <strong>{tenantRentBills.length}</strong>
-          <p>Monthly rent bills</p>
+          <strong>{formatPeso(totalBalance)}</strong>
         </div>
       </div>
 
@@ -230,164 +253,158 @@ function TenantDetailsPage({
         <div className="ledger-board-header">
           <div>
             <h3>Monthly Billing Tracker</h3>
-            <p>Main payment tracker grouped by billing month.</p>
+            <p>Track balances and installment payments per month.</p>
           </div>
         </div>
 
         <div className="ledger-main-table-wrap">
-          <table className="sheet-table ledger-main-table">
+          <table className="sheet-table ledger-main-table partial-payment-table">
             <thead>
               <tr>
                 <th>Month</th>
                 <th>Electricity</th>
-                <th>Date Paid</th>
+                <th>Elec Paid</th>
+                <th>Elec Bal</th>
                 <th>Water</th>
-                <th>Date Paid</th>
+                <th>Water Paid</th>
+                <th>Water Bal</th>
                 <th>Rent</th>
-                <th>Date Paid</th>
+                <th>Rent Paid</th>
+                <th>Rent Bal</th>
                 <th>Receipt</th>
+                <th>Payment</th>
               </tr>
             </thead>
 
             <tbody>
               {ledgerRows.map((row) => {
-                const utilityBill = row.utilityBill;
-                const rentBill = row.rentBill;
+                const uBill = row.utilityBill;
+                const rBill = row.rentBill;
+
+                const elecAmount = uBill ? calculateElectricBill(uBill) : 0;
+                const waterAmount = uBill ? calculateWaterBill(uBill) : 0;
+                const rentAmount = rBill ? rBill.rentAmount : 0;
+
+                const elecPayments = uBill ? getPaymentsForBill("utility_electric", uBill.id) : [];
+                const waterPayments = uBill ? getPaymentsForBill("utility_water", uBill.id) : [];
+                const rentPayments = rBill ? getPaymentsForBill("rent", rBill.id) : [];
+
+                const elecPaid = sumPayments(elecPayments);
+                const waterPaid = sumPayments(waterPayments);
+                const rentPaid = sumPayments(rentPayments);
+
+                const elecBal = elecAmount - elecPaid;
+                const waterBal = waterAmount - waterPaid;
+                const rentBal = rentAmount - rentPaid;
+
+                const isExpanded = activePaymentRow === row.monthKey;
 
                 return (
-                  <tr key={row.monthKey}>
-                    <td>{row.monthLabel}</td>
+                  <>
+                    <tr key={row.monthKey} className={isExpanded ? "row-highlight" : ""}>
+                      <td>{row.monthLabel}</td>
+                      <td>{uBill ? formatPeso(elecAmount) : "-"}</td>
+                      <td className="status-cell">{getStatusDisplay(elecAmount, elecPaid, elecPayments)}</td>
+                      <td className={elecBal > 0 ? "balance-due" : ""}>{uBill ? formatPeso(elecBal) : "-"}</td>
+                      
+                      <td>{uBill ? formatPeso(waterAmount) : "-"}</td>
+                      <td className="status-cell">{getStatusDisplay(waterAmount, waterPaid, waterPayments)}</td>
+                      <td className={waterBal > 0 ? "balance-due" : ""}>{uBill ? formatPeso(waterBal) : "-"}</td>
+                      
+                      <td>{rBill ? formatPeso(rentAmount) : "-"}</td>
+                      <td className="status-cell">{getStatusDisplay(rentAmount, rentPaid, rentPayments)}</td>
+                      <td className={rentBal > 0 ? "balance-due" : ""}>{rBill ? formatPeso(rentBal) : "-"}</td>
 
-                    <td>
-                      {utilityBill
-                        ? formatPeso(calculateElectricBill(utilityBill))
-                        : ""}
-                    </td>
+                      <td>
+                        <div className="receipt-actions">
+                          {uBill && (
+                            <button className="secondary-button compact-button" onClick={() => setSelectedReceipt({ type: "utility", id: uBill.id })}>U</button>
+                          )}
+                          {rBill && (
+                            <button className="secondary-button compact-button" onClick={() => setSelectedReceipt({ type: "rent", id: rBill.id })}>R</button>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <button 
+                          className={`compact-button ${isExpanded ? "primary-button" : "secondary-button"}`}
+                          onClick={() => setActivePaymentRow(isExpanded ? null : row.monthKey)}
+                        >
+                          {isExpanded ? "Close" : "Pay"}
+                        </button>
+                      </td>
+                    </tr>
+                    
+                    {isExpanded && (
+                      <tr key={`${row.monthKey}-expanded`} className="expanded-payment-row">
+                        <td colSpan={12}>
+                          <div className="payment-management-grid">
+                            <form className="mini-payment-form" onSubmit={(e) => handlePaymentSubmit(e, row)}>
+                              <h4>Add Payment for {row.monthLabel}</h4>
+                              <div className="form-grid-2">
+                                <div className="form-group">
+                                  <label>Type</label>
+                                  <select value={payType} onChange={(e) => setPayType(e.target.value as any)}>
+                                    {uBill && <option value="utility_electric">Electricity</option>}
+                                    {uBill && <option value="utility_water">Water</option>}
+                                    {rBill && <option value="rent">Rent</option>}
+                                  </select>
+                                </div>
+                                <div className="form-group">
+                                  <label>Amount</label>
+                                  <input type="number" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} required />
+                                </div>
+                              </div>
+                              <div className="form-grid-2">
+                                <div className="form-group">
+                                  <label>Date</label>
+                                  <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} required />
+                                </div>
+                                <div className="form-group">
+                                  <label>Notes</label>
+                                  <input type="text" value={payNotes} onChange={(e) => setPayNotes(e.target.value)} />
+                                </div>
+                              </div>
+                              <button type="submit" className="primary-button">Submit Payment</button>
+                            </form>
 
-                    <td>
-                      {utilityBill
-                        ? formatPaidStatus(utilityBill.amountPaid)
-                        : ""}
-                    </td>
-
-                    <td>
-                      {utilityBill
-                        ? formatPeso(calculateWaterBill(utilityBill))
-                        : ""}
-                    </td>
-
-                    <td>
-                      {utilityBill
-                        ? formatPaidStatus(utilityBill.amountPaid)
-                        : ""}
-                    </td>
-
-                    <td>{rentBill ? formatPeso(rentBill.rentAmount) : ""}</td>
-
-                    <td>
-                      {rentBill ? formatPaidStatus(rentBill.amountPaid) : ""}
-                    </td>
-
-                    <td>
-                      <div className="receipt-actions">
-                        {utilityBill && (
-                          <button
-                            className="secondary-button compact-button"
-                            onClick={() =>
-                              setSelectedReceipt({
-                                type: "utility",
-                                id: utilityBill.id,
-                              })
-                            }
-                          >
-                            Utility
-                          </button>
-                        )}
-
-                        {rentBill && (
-                          <button
-                            className="secondary-button compact-button"
-                            onClick={() =>
-                              setSelectedReceipt({
-                                type: "rent",
-                                id: rentBill.id,
-                              })
-                            }
-                          >
-                            Rent
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                            <div className="payment-history-mini">
+                              <h4>Payment History</h4>
+                              <table className="sheet-table history-table">
+                                <thead>
+                                  <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Notes</th>
+                                    <th></th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {[...elecPayments, ...waterPayments, ...rentPayments].sort((a,b) => b.datePaid.localeCompare(a.datePaid)).map(p => (
+                                    <tr key={p.id}>
+                                      <td>{p.datePaid}</td>
+                                      <td>{p.billType.replace("utility_", "")}</td>
+                                      <td>{formatPeso(p.amount)}</td>
+                                      <td>{p.notes}</td>
+                                      <td><button className="danger-link" onClick={() => onDeletePayment(p.id)}>Delete</button></td>
+                                    </tr>
+                                  ))}
+                                  {elecPayments.length + waterPayments.length + rentPayments.length === 0 && (
+                                    <tr><td colSpan={5}>No payments found</td></tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 );
               })}
-
-              {ledgerRows.length === 0 && (
-                <tr>
-                  <td colSpan={8}>No monthly records found.</td>
-                </tr>
-              )}
             </tbody>
           </table>
-        </div>
-
-        <div className="ledger-mini-grid">
-          <div className="ledger-table-card">
-            <table className="sheet-table mini-sheet-table">
-              <thead>
-                <tr>
-                  <th>Consumption</th>
-                  <th>Electricity</th>
-                  <th>Water</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {tenantUtilityBills.map((bill) => (
-                  <tr key={`consumption-${bill.id}`}>
-                    <td>{getMonthLabelFromDate(bill.billingDate)}</td>
-                    <td>{calculateElectricConsumption(bill).toFixed(1)}</td>
-                    <td>{calculateWaterConsumption(bill).toFixed(1)}</td>
-                  </tr>
-                ))}
-
-                {tenantUtilityBills.length === 0 && (
-                  <tr>
-                    <td colSpan={3}>No data</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="ledger-table-card">
-            <table className="sheet-table mini-sheet-table submeter-table">
-              <thead>
-                <tr>
-                  <th>Submeter</th>
-                  <th>Electricity</th>
-                  <th>Water</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {tenantUtilityBills.map((bill) => (
-                  <tr key={`submeter-${bill.id}`}>
-                    <td>{getMonthLabelFromDate(bill.billingDate)}</td>
-                    <td>{bill.currentElectricReading.toFixed(2)}</td>
-                    <td>{bill.currentWaterReading.toFixed(2)}</td>
-                  </tr>
-                ))}
-
-                {tenantUtilityBills.length === 0 && (
-                  <tr>
-                    <td colSpan={3}>No data</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
         </div>
       </div>
 
@@ -411,7 +428,7 @@ function TenantDetailsPage({
         {!selectedReceipt && (
           <div className="empty-receipt-card">
             <strong>No receipt selected</strong>
-            <p>Click Utility or Rent in the receipt column above.</p>
+            <p>Click U or R in the receipt column above.</p>
           </div>
         )}
 
@@ -420,6 +437,7 @@ function TenantDetailsPage({
             <UtilityBillCard
               tenant={tenant}
               bill={selectedUtilityReceipt}
+              payments={payments.filter(p => p.billId === selectedUtilityReceipt.id && (p.billType === "utility_electric" || p.billType === "utility_water"))}
               onDeleteBill={onDeleteUtilityBill}
             />
           </div>
@@ -430,6 +448,7 @@ function TenantDetailsPage({
             <RentBillCard
               tenant={tenant}
               bill={selectedRentReceipt}
+              payments={payments.filter(p => p.billId === selectedRentReceipt.id && p.billType === "rent")}
               onDeleteBill={onDeleteRentBill}
             />
           </div>

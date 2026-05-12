@@ -43,6 +43,16 @@ export type RentBill = {
   rentPaidDate?: string | null;
 };
 
+export type Payment = {
+  id: number;
+  tenantId: number;
+  billType: "utility_electric" | "utility_water" | "rent";
+  billId: number;
+  amount: number;
+  datePaid: string;
+  notes?: string | null;
+};
+
 export type Page =
   | "dashboard"
   | "tenants"

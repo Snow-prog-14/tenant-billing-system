@@ -57,6 +57,7 @@ function AddRentBillForm({
   const [rentAmount, setRentAmount] = useState("3000");
   const [previousUnpaidBalance, setPreviousUnpaidBalance] = useState("0");
   const [amountPaid, setAmountPaid] = useState("0");
+  const [rentPaidDate, setRentPaidDate] = useState("");
 
   const selectedTenant = tenants.find((tenant) => tenant.id === Number(tenantId));
 
@@ -95,6 +96,7 @@ function AddRentBillForm({
       rentAmount: Number(rentAmount),
       previousUnpaidBalance: Number(previousUnpaidBalance),
       amountPaid: Number(amountPaid),
+      rentPaidDate: rentPaidDate || null,
     });
 
     setTenantId("");
@@ -104,6 +106,7 @@ function AddRentBillForm({
     setRentAmount("3000");
     setPreviousUnpaidBalance("0");
     setAmountPaid("0");
+    setRentPaidDate("");
   }
 
   return (
@@ -180,44 +183,54 @@ function AddRentBillForm({
           </div>
         </div>
 
-        <div className="form-grid-4">
-          <div className="form-group">
-            <label htmlFor="rentAmount">Rent Amount</label>
-            <input
-              id="rentAmount"
-              type="number"
-              step="0.01"
-              value={rentAmount}
-              onChange={(event) => setRentAmount(event.target.value)}
-            />
-          </div>
+       <div className="form-grid-4">
+  <div className="form-group">
+    <label htmlFor="rentAmount">Rent Amount</label>
+    <input
+      id="rentAmount"
+      type="number"
+      step="0.01"
+      value={rentAmount}
+      onChange={(event) => setRentAmount(event.target.value)}
+    />
+  </div>
 
-          <div className="form-group">
-            <label htmlFor="rentPreviousBalance">Previous Balance</label>
-            <input
-              id="rentPreviousBalance"
-              type="number"
-              step="0.01"
-              value={previousUnpaidBalance}
-              onChange={(event) => setPreviousUnpaidBalance(event.target.value)}
-            />
-          </div>
+  <div className="form-group">
+    <label htmlFor="rentPreviousBalance">Previous Balance</label>
+    <input
+      id="rentPreviousBalance"
+      type="number"
+      step="0.01"
+      value={previousUnpaidBalance}
+      onChange={(event) => setPreviousUnpaidBalance(event.target.value)}
+    />
+  </div>
 
-          <div className="form-group">
-            <label htmlFor="rentAmountPaid">Amount Paid</label>
-            <input
-              id="rentAmountPaid"
-              type="number"
-              step="0.01"
-              value={amountPaid}
-              onChange={(event) => setAmountPaid(event.target.value)}
-            />
-          </div>
+  <div className="form-group">
+    <label htmlFor="rentAmountPaid">Amount Paid</label>
+    <input
+      id="rentAmountPaid"
+      type="number"
+      step="0.01"
+      value={amountPaid}
+      onChange={(event) => setAmountPaid(event.target.value)}
+    />
+  </div>
 
-          <button className="primary-button form-submit-button" type="submit">
-            Add Rent Bill
-          </button>
-        </div>
+  <div className="form-group">
+    <label htmlFor="rentPaidDate">Rent Date Paid</label>
+    <input
+      id="rentPaidDate"
+      type="date"
+      value={rentPaidDate}
+      onChange={(event) => setRentPaidDate(event.target.value)}
+    />
+  </div>
+
+  <button className="primary-button form-submit-button" type="submit">
+    Add Rent Bill
+  </button>
+</div>
       </div>
     </form>
   );

@@ -1594,6 +1594,124 @@ main {
   align-items: end;
 }
 
+/* Partial Payment System Styles */
+.partial-payment-table th {
+  background: #334155;
+  font-size: 13px;
+  padding: 10px 8px;
+}
+
+.partial-payment-table td {
+  padding: 10px 8px;
+  font-size: 13px;
+}
+
+.status-cell {
+  font-weight: 700;
+  font-size: 11px !important;
+  color: #64748b;
+}
+
+.balance-due {
+  color: #e11d48;
+  font-weight: 900;
+  background: rgba(225, 29, 72, 0.05) !important;
+}
+
+.row-highlight {
+  background: #f0f9ff !important;
+}
+
+.expanded-payment-row {
+  background: #f8fafc !important;
+}
+
+.expanded-payment-row td {
+  padding: 24px !important;
+  border-bottom: 2px solid #2563eb !important;
+}
+
+.payment-management-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 32px;
+}
+
+.mini-payment-form {
+  background: white;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.mini-payment-form h4,
+.payment-history-mini h4 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  color: #0f172a;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 8px;
+}
+
+.payment-history-mini {
+  background: white;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.history-table th {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+}
+
+.history-table td {
+  font-size: 12px;
+}
+
+.danger-link {
+  background: transparent;
+  border: 0;
+  color: #e11d48;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.danger-link:hover {
+  color: #be123c;
+}
+
+.receipt-history-table {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.receipt-history-table th {
+  text-align: left;
+  padding: 6px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.receipt-history-table td {
+  padding: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.paid-text {
+  color: #059669;
+}
+
+@media (max-width: 1000px) {
+  .payment-management-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1100px) {
   .form-grid-5 {
     grid-template-columns: repeat(2, minmax(160px, 1fr));
@@ -1603,5 +1721,50 @@ main {
 @media (max-width: 700px) {
   .form-grid-5 {
     grid-template-columns: 1fr;
+  }
+}
+
+.partial-payment-table {
+  font-size: 12px;
+}
+
+.partial-payment-table th,
+.partial-payment-table td {
+  padding: 10px 8px;
+}
+
+.partial-payment-table th {
+  background: #334155;
+  white-space: nowrap;
+}
+
+.status-cell {
+  font-size: 11px;
+  font-weight: 800;
+  color: #334155;
+}
+
+.balance-due {
+  color: #991b1b !important;
+  background: #fee2e2 !important;
+  font-weight: 900;
+}
+
+.receipt-actions {
+  gap: 4px;
+}
+
+.compact-button {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.ledger-main-table-wrap {
+  max-height: none;
+}
+
+@media (max-width: 1200px) {
+  .partial-payment-table {
+    min-width: 1200px;
   }
 }
