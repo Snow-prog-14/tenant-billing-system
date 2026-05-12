@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import type { RentBill, Tenant } from "../types/billing";
+import type { CalendarMonth, RentBill, Tenant } from "../types/billing";
 
 type AddRentBillFormProps = {
   tenants: Tenant[];
+  calendarMonths: CalendarMonth[];
   rentDueDay: number;
   onAddRentBill: (bill: Omit<RentBill, "id">) => void;
 };
@@ -46,6 +47,7 @@ function getRentDueDateFromMonth(monthValue: string, rentDueDay: number) {
 
 function AddRentBillForm({
   tenants,
+  calendarMonths,
   rentDueDay,
   onAddRentBill,
 }: AddRentBillFormProps) {
@@ -144,12 +146,24 @@ function AddRentBillForm({
 
           <div className="form-group">
             <label htmlFor="rentBillingMonth">Billing Month</label>
-            <input
+            <select
               id="rentBillingMonth"
-              type="month"
               value={billingMonth}
               onChange={(event) => setBillingMonth(event.target.value)}
-            />
+            >
+              <option value="">Select billing month</option>
+              {calendarMonths.map((month) => {
+                const value = `${month.year}-${String(month.numMonth).padStart(
+                  2,
+                  "0"
+                )}`;
+                return (
+                  <option key={month.monthKey} value={value}>
+                    {month.monthLabel}
+                  </option>
+                );
+              })}
+            </select>
           </div>
 
           <div className="form-group">

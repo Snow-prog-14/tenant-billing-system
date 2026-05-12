@@ -53,6 +53,15 @@ export type Payment = {
   notes?: string | null;
 };
 
+export type CalendarMonth = {
+  monthKey: number;
+  year: number;
+  numMonth: number;
+  monthName: string;
+  shortMonth: string;
+  monthLabel: string;
+};
+
 export type Page =
   | "dashboard"
   | "tenants"

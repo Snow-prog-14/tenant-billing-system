@@ -9,6 +9,7 @@ import TenantDetailsPage from "./pages/TenantDetailsPage";
 import TenantsPage from "./pages/TenantsPage";
 import type {
   BillingSettings,
+  CalendarMonth,
   Page,
   Payment,
   RentBill,
@@ -30,6 +31,7 @@ function App() {
   const [utilityBills, setUtilityBills] = useState<UtilityBill[]>([]);
   const [rentBills, setRentBills] = useState<RentBill[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [calendarMonths, setCalendarMonths] = useState<CalendarMonth[]>([]);
 
   const [isLoadingTenants, setIsLoadingTenants] = useState(true);
   const [isLoadingUtilityBills, setIsLoadingUtilityBills] = useState(true);
@@ -53,7 +55,20 @@ function App() {
     fetchUtilityBills();
     fetchRentBills();
     fetchPayments();
+    fetchCalendarMonths();
   }, []);
+
+  async function fetchCalendarMonths() {
+    try {
+      const response = await fetch(`${API_URL}/calendar/months`);
+      if (!response.ok) throw new Error("Failed to fetch calendar months");
+      const data: CalendarMonth[] = await response.json();
+      setCalendarMonths(data);
+    } catch (error) {
+      console.error(error);
+      alert("Could not load calendar months from database.");
+    }
+  }
 
   async function fetchSettings() {
     try {
@@ -608,13 +623,18 @@ function App() {
                   }
 
                   return (
-                    <UtilityBillCard
-                      key={bill.id}
-                      tenant={tenant}
-                      bill={bill}
-                      payments={payments}
-                      onDeleteBill={handleDeleteUtilityBill}
-                    />
+                 <UtilityBillCard
+  key={bill.id}
+  tenant={tenant}
+  bill={bill}
+  payments={payments.filter(
+    (payment) =>
+      payment.billId === bill.id &&
+      (payment.billType === "utility_electric" ||
+        payment.billType === "utility_water")
+  )}
+  onDeleteBill={handleDeleteUtilityBill}
+/>
                   );
                 })}
 
@@ -646,6 +666,7 @@ function App() {
               <AddUtilityBillForm
                 tenants={tenants}
                 utilityBills={utilityBills}
+                calendarMonths={calendarMonths}
                 waterRate={settings.waterRate}
                 electricRate={settings.electricRate}
                 utilityDueDay={settings.utilityDueDay}
@@ -688,13 +709,17 @@ function App() {
                   }
 
                   return (
-                    <RentBillCard
-                      key={bill.id}
-                      tenant={tenant}
-                      bill={bill}
-                      payments={payments}
-                      onDeleteBill={handleDeleteRentBill}
-                    />
+                  <RentBillCard
+  key={bill.id}
+  tenant={tenant}
+  bill={bill}
+  payments={payments.filter(
+    (payment) =>
+      payment.billId === bill.id &&
+      payment.billType === "rent"
+  )}
+  onDeleteBill={handleDeleteRentBill}
+/>
                   );
                 })}
 
@@ -725,6 +750,7 @@ function App() {
 
               <AddRentBillForm
                 tenants={tenants}
+                calendarMonths={calendarMonths}
                 rentDueDay={settings.rentDueDay}
                 onAddRentBill={async (bill) => {
                   await handleAddRentBill(bill);

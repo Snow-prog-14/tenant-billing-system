@@ -591,11 +591,55 @@ app.post("/api/payments", async (req, res) => {
 app.delete("/api/payments/:id", async (req, res) => {
   try {
     const paymentId = Number(req.params.id);
-    await db.query("DELETE FROM payments WHERE id = ?", [paymentId]);
-    res.json({ message: "Payment deleted successfully" });
+
+    if (!paymentId) {
+      return res.status(400).json({
+        message: "Valid payment ID is required",
+      });
+    }
+
+    const [result] = await db.query(
+      `
+      DELETE FROM payments
+      WHERE id = ?
+      `,
+      [paymentId]
+    );
+
+    res.json({
+      message: "Payment deleted successfully",
+      result,
+    });
   } catch (error) {
     console.error("Delete payment error:", error);
-    res.status(500).json({ message: "Failed to delete payment" });
+
+    res.status(500).json({
+      message: "Failed to delete payment",
+    });
+  }
+});
+
+
+app.get("/api/calendar/months", async (_req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT DISTINCT
+        month_key AS monthKey,
+        year,
+        num_month AS numMonth,
+        month_name AS monthName,
+        short_month AS shortMonth,
+        month_label AS monthLabel
+      FROM calendar_dates
+      ORDER BY month_key ASC
+    `);
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch calendar months error:", error);
+    res.status(500).json({
+      message: "Failed to fetch calendar months",
+    });
   }
 });
 
