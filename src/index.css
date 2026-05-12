@@ -10,5 +10,119 @@ body {
 }
 
 main {
+  min-height: 100vh;
   padding: 24px;
+}
+
+.app-header {
+  margin-bottom: 24px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.app-header p {
+  margin: 8px 0 0;
+  color: #6b7280;
+}
+
+.bill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 420px));
+  gap: 24px;
+  align-items: start;
+}
+
+.bill-card {
+  background: white;
+  border: 1px solid #111827;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.bill-title {
+  background: #e98787;
+  color: #000;
+  text-align: center;
+  font-weight: 700;
+  padding: 8px;
+  border-bottom: 1px solid #111827;
+}
+
+.bill-info {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.bill-info div {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.bill-info span {
+  font-weight: 700;
+}
+
+.section-header {
+  text-align: center;
+  font-weight: 700;
+  padding: 6px;
+  border-top: 1px solid #111827;
+  border-bottom: 1px solid #111827;
+  font-size: 14px;
+}
+
+.section-header.water {
+  background: #cfe2f3;
+}
+
+.section-header.electric {
+  background: #fff2cc;
+}
+
+.section-header.balance {
+  background: #fce5cd;
+}
+
+.bill-row {
+  display: grid;
+  grid-template-columns: 1fr 130px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.bill-row span,
+.bill-row strong {
+  padding: 6px 8px;
+}
+
+.bill-row strong {
+  text-align: right;
+  border-left: 1px solid #e5e7eb;
+}
+
+.bill-row.amount {
+  font-weight: 700;
+}
+
+.total-row {
+  display: grid;
+  grid-template-columns: 1fr 130px;
+  background: #e66565;
+  border-top: 1px solid #111827;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.total-row span,
+.total-row strong {
+  padding: 8px;
+}
+
+.total-row strong {
+  text-align: right;
+  border-left: 1px solid rgba(0, 0, 0, 0.25);
 }
