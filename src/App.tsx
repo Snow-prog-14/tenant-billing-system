@@ -2,9 +2,10 @@ import { useState } from "react";
 import RentBillCard from "./components/RentBillCard";
 import Sidebar from "./components/Sidebar";
 import UtilityBillCard from "./components/UtilityBillCard";
-import TenantsPage from "./pages/TenantsPage";
 import { rentBills, tenants as sampleTenants, utilityBills } from "./data/sampleData";
-import type { Page } from "./types/billing";
+import SettingsPage from "./pages/SettingsPage";
+import TenantsPage from "./pages/TenantsPage";
+import type { BillingSettings, Page } from "./types/billing";
 import {
   calculateTotalRentDue,
   calculateTotalUtilityDue,
@@ -15,7 +16,21 @@ function App() {
   const [activePage, setActivePage] = useState<Page>("dashboard");
   const [tenants, setTenants] = useState(sampleTenants);
 
-  const totalUtilityDue = utilityBills.reduce(
+  const [settings, setSettings] = useState<BillingSettings>({
+    waterRate: 42.6,
+    electricRate: 16,
+    defaultMonthlyRent: 3000,
+    utilityDueDay: 2,
+    rentDueDay: 5,
+  });
+
+  const utilityBillsWithSettings = utilityBills.map((bill) => ({
+    ...bill,
+    waterRate: settings.waterRate,
+    electricRate: settings.electricRate,
+  }));
+
+  const totalUtilityDue = utilityBillsWithSettings.reduce(
     (sum, bill) => sum + calculateTotalUtilityDue(bill),
     0
   );
@@ -37,44 +52,67 @@ function App() {
 
         {activePage === "dashboard" && (
           <section className="page-section">
-            <h2>Dashboard</h2>
-
-            <div className="dashboard-grid">
-              <div className="dashboard-card">
-                <span>Total Tenants</span>
-                <strong>{tenants.length}</strong>
+            <div className="dashboard-hero">
+              <div>
+                <p className="eyebrow">Overview</p>
+                <h2>Dashboard</h2>
+                <p>
+                  Track tenants, rent balances, and monthly utility collections
+                  in one place.
+                </p>
               </div>
 
-              <div className="dashboard-card">
-                <span>Total Utility Due</span>
-                <strong>{formatPeso(totalUtilityDue)}</strong>
-              </div>
-
-              <div className="dashboard-card">
-                <span>Total Rent Due</span>
-                <strong>{formatPeso(totalRentDue)}</strong>
-              </div>
-
-              <div className="dashboard-card">
+              <div className="hero-total">
                 <span>Total Collection</span>
                 <strong>{formatPeso(totalUtilityDue + totalRentDue)}</strong>
+              </div>
+            </div>
+
+            <div className="dashboard-grid">
+              <div className="dashboard-card tenants-card">
+                <div className="dashboard-card-icon">◎</div>
+                <span>Total Tenants</span>
+                <strong>{tenants.length}</strong>
+                <p>Currently registered tenants</p>
+              </div>
+
+              <div className="dashboard-card utility-card">
+                <div className="dashboard-card-icon">⚡</div>
+                <span>Total Utility Due</span>
+                <strong>{formatPeso(totalUtilityDue)}</strong>
+                <p>Water and electricity balance</p>
+              </div>
+
+              <div className="dashboard-card rent-due-card">
+                <div className="dashboard-card-icon">⌂</div>
+                <span>Total Rent Due</span>
+                <strong>{formatPeso(totalRentDue)}</strong>
+                <p>Monthly rent balance</p>
+              </div>
+
+              <div className="dashboard-card collection-card">
+                <div className="dashboard-card-icon">₱</div>
+                <span>Total Collection</span>
+                <strong>{formatPeso(totalUtilityDue + totalRentDue)}</strong>
+                <p>Expected amount to collect</p>
               </div>
             </div>
           </section>
         )}
 
-{activePage === "tenants" && (
-  <TenantsPage
-    tenants={tenants}
-    onAddTenant={(tenant) => setTenants([...tenants, tenant])}
-  />
-)}
+        {activePage === "tenants" && (
+          <TenantsPage
+            tenants={tenants}
+            onAddTenant={(tenant) => setTenants([...tenants, tenant])}
+          />
+        )}
+
         {activePage === "utility" && (
           <section className="page-section">
             <h2>Utility Bills</h2>
 
             <div className="bill-grid">
-              {utilityBills.map((bill) => {
+              {utilityBillsWithSettings.map((bill) => {
                 const tenant = tenants.find(
                   (tenant) => tenant.id === bill.tenantId
                 );
@@ -109,6 +147,10 @@ function App() {
               })}
             </div>
           </section>
+        )}
+
+        {activePage === "settings" && (
+          <SettingsPage settings={settings} onUpdateSettings={setSettings} />
         )}
       </main>
     </div>

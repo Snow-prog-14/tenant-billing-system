@@ -9,8 +9,12 @@ function Sidebar({ activePage, onChangePage }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <h2>Billing</h2>
-        <p>Tenant System</p>
+        <div className="logo-icon">TB</div>
+
+        <div>
+          <h2>TenantBill</h2>
+          <p>Billing Manager</p>
+        </div>
       </div>
 
       <nav className="sidebar-nav">
@@ -18,30 +22,47 @@ function Sidebar({ activePage, onChangePage }: SidebarProps) {
           className={activePage === "dashboard" ? "active" : ""}
           onClick={() => onChangePage("dashboard")}
         >
-          Dashboard
+          <span className="nav-icon">▦</span>
+          <span>Dashboard</span>
         </button>
 
         <button
           className={activePage === "tenants" ? "active" : ""}
           onClick={() => onChangePage("tenants")}
         >
-          Tenants
+          <span className="nav-icon">◎</span>
+          <span>Tenants</span>
         </button>
 
         <button
           className={activePage === "utility" ? "active" : ""}
           onClick={() => onChangePage("utility")}
         >
-          Utility Bills
+          <span className="nav-icon">⚡</span>
+          <span>Utility Bills</span>
         </button>
 
         <button
           className={activePage === "rent" ? "active" : ""}
           onClick={() => onChangePage("rent")}
         >
-          Rent Bills
+          <span className="nav-icon">⌂</span>
+          <span>Rent Bills</span>
         </button>
+
+        <button
+        className={activePage === "settings" ? "active" : ""}
+        onClick={() => onChangePage("settings")}
+      >
+        <span className="nav-icon">⚙</span>
+        <span>Settings</span>
+      </button>
       </nav>
+
+      <div className="sidebar-footer">
+        <span>Current Mode</span>
+        <strong>Local Preview</strong>
+      </div>
     </aside>
   );
 }

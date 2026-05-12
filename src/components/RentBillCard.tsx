@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { toPng } from "html-to-image";
 import type { RentBill, Tenant } from "../types/billing";
 import {
   calculateTotalRentDue,
@@ -10,54 +12,103 @@ type RentBillCardProps = {
 };
 
 function RentBillCard({ tenant, bill }: RentBillCardProps) {
+  const billRef = useRef<HTMLElement>(null);
+
   const totalDue = calculateTotalRentDue(bill);
 
+  function handlePrint() {
+    window.print();
+  }
+
+  async function handleSaveAsPhoto() {
+    if (!billRef.current) {
+      return;
+    }
+
+    const dataUrl = await toPng(billRef.current, {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: "#ffffff",
+    });
+
+    const link = document.createElement("a");
+    link.download = `${tenant.name}-rent-bill.png`;
+    link.href = dataUrl;
+    link.click();
+  }
+
   return (
-    <section className="bill-card rent-card">
-      <div className="bill-title">MONTHLY TENANT RENT</div>
+    <div className="bill-wrapper">
+      <div className="bill-actions">
+        <button className="secondary-button" onClick={handlePrint}>
+          Print
+        </button>
 
-      <div className="bill-info">
-        <div>
-          <span>Tenant Name:</span>
-          <strong>{tenant.name}</strong>
+        <button className="primary-button" onClick={handleSaveAsPhoto}>
+          Save as Photo
+        </button>
+      </div>
+
+      <section className="modern-bill-card" ref={billRef}>
+        <div className="modern-bill-header rent-header">
+          <div>
+            <p className="bill-label">Rent Bill</p>
+            <h2>Monthly Tenant Rent</h2>
+          </div>
+
+          <div className="bill-pill">Room {tenant.roomNo}</div>
         </div>
-        <div>
-          <span>Unit / Room No.:</span>
-          <strong>{tenant.roomNo}</strong>
+
+        <div className="modern-bill-body">
+          <div className="tenant-summary">
+            <div>
+              <span>Tenant Name</span>
+              <strong>{tenant.name}</strong>
+            </div>
+            <div>
+              <span>Billing Period</span>
+              <strong>{bill.billingPeriod}</strong>
+            </div>
+            <div>
+              <span>Due Date</span>
+              <strong>{bill.dueDate}</strong>
+            </div>
+          </div>
+
+          <div className="modern-section">
+            <div className="modern-section-title">
+              <h3>Room Rent</h3>
+              <strong>{formatPeso(bill.rentAmount)}</strong>
+            </div>
+
+            <div className="modern-row">
+              <span>Monthly Rent</span>
+              <strong>{formatPeso(bill.rentAmount)}</strong>
+            </div>
+          </div>
+
+          <div className="modern-section">
+            <div className="modern-section-title">
+              <h3>Payment and Balance</h3>
+            </div>
+
+            <div className="modern-row">
+              <span>Previous Unpaid Balance</span>
+              <strong>{formatPeso(bill.previousUnpaidBalance)}</strong>
+            </div>
+            <div className="modern-row">
+              <span>Amount Paid</span>
+              <strong>{formatPeso(bill.amountPaid)}</strong>
+            </div>
+          </div>
+
+          <div className="modern-total">
+            <span>Total Amount Due</span>
+            <strong>{formatPeso(totalDue)}</strong>
+          </div>
         </div>
-        <div>
-          <span>Billing Period:</span>
-          <strong>{bill.billingPeriod}</strong>
-        </div>
-        <div>
-          <span>Due Date:</span>
-          <strong>{bill.dueDate}</strong>
-        </div>
-      </div>
-
-      <div className="section-header room">ROOM RENT</div>
-
-      <div className="bill-row amount">
-        <span>Rent Amount</span>
-        <strong>{formatPeso(bill.rentAmount)}</strong>
-      </div>
-
-      <div className="section-header balance">PAYMENT AND BALANCE</div>
-
-      <div className="bill-row">
-        <span>Previous Unpaid Balance</span>
-        <strong>{formatPeso(bill.previousUnpaidBalance)}</strong>
-      </div>
-      <div className="bill-row">
-        <span>Amount Paid</span>
-        <strong>{formatPeso(bill.amountPaid)}</strong>
-      </div>
-
-      <div className="total-row">
-        <span>Total Amount Due</span>
-        <strong>{formatPeso(totalDue)}</strong>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
 

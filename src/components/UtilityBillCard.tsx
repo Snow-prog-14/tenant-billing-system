@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { toPng } from "html-to-image";
 import type { Tenant, UtilityBill } from "../types/billing";
 import {
   calculateElectricBill,
@@ -14,6 +16,8 @@ type UtilityBillCardProps = {
 };
 
 function UtilityBillCard({ tenant, bill }: UtilityBillCardProps) {
+  const billRef = useRef<HTMLElement>(null);
+
   const waterConsumption = calculateWaterConsumption(bill);
   const waterBill = calculateWaterBill(bill);
 
@@ -22,99 +26,143 @@ function UtilityBillCard({ tenant, bill }: UtilityBillCardProps) {
 
   const totalDue = calculateTotalUtilityDue(bill);
 
+  function handlePrint() {
+    window.print();
+  }
+
+  async function handleSaveAsPhoto() {
+    if (!billRef.current) {
+      return;
+    }
+
+    const dataUrl = await toPng(billRef.current, {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: "#ffffff",
+    });
+
+    const link = document.createElement("a");
+    link.download = `${tenant.name}-utility-bill.png`;
+    link.href = dataUrl;
+    link.click();
+  }
+
   return (
-    <section className="bill-card">
-      <div className="bill-title">MONTHLY TENANT UTILITY BILL</div>
+    <div className="bill-wrapper">
+      <div className="bill-actions">
+        <button className="secondary-button" onClick={handlePrint}>
+          Print
+        </button>
 
-      <div className="bill-info">
-        <div>
-          <span>Tenant Name:</span>
-          <strong>{tenant.name}</strong>
+        <button className="primary-button" onClick={handleSaveAsPhoto}>
+          Save as Photo
+        </button>
+      </div>
+
+      <section className="modern-bill-card" ref={billRef}>
+        <div className="modern-bill-header utility-header">
+          <div>
+            <p className="bill-label">Utility Bill</p>
+            <h2>Monthly Tenant Utility Bill</h2>
+          </div>
+
+          <div className="bill-pill">Room {tenant.roomNo}</div>
         </div>
-        <div>
-          <span>Unit / Room No.:</span>
-          <strong>{tenant.roomNo}</strong>
+
+        <div className="modern-bill-body">
+          <div className="tenant-summary">
+            <div>
+              <span>Tenant Name</span>
+              <strong>{tenant.name}</strong>
+            </div>
+            <div>
+              <span>Billing Date</span>
+              <strong>{bill.billingDate}</strong>
+            </div>
+            <div>
+              <span>Billing Period</span>
+              <strong>{bill.billingPeriod}</strong>
+            </div>
+            <div>
+              <span>Due Date</span>
+              <strong>{bill.dueDate}</strong>
+            </div>
+          </div>
+
+          <div className="modern-section">
+            <div className="modern-section-title">
+              <h3>Water Bill</h3>
+              <strong>{formatPeso(waterBill)}</strong>
+            </div>
+
+            <div className="modern-row">
+              <span>Previous Reading</span>
+              <strong>{bill.previousWaterReading} cu.m</strong>
+            </div>
+            <div className="modern-row">
+              <span>Current Reading</span>
+              <strong>{bill.currentWaterReading} cu.m</strong>
+            </div>
+            <div className="modern-row">
+              <span>Consumption</span>
+              <strong>{waterConsumption.toFixed(1)} cu.m</strong>
+            </div>
+            <div className="modern-row">
+              <span>Rate per cu.m</span>
+              <strong>{formatPeso(bill.waterRate)}</strong>
+            </div>
+          </div>
+
+          <div className="modern-section">
+            <div className="modern-section-title">
+              <h3>Electricity Bill</h3>
+              <strong>{formatPeso(electricBill)}</strong>
+            </div>
+
+            <div className="modern-row">
+              <span>Previous Reading</span>
+              <strong>{bill.previousElectricReading} kWh</strong>
+            </div>
+            <div className="modern-row">
+              <span>Current Reading</span>
+              <strong>{bill.currentElectricReading} kWh</strong>
+            </div>
+            <div className="modern-row">
+              <span>Consumption</span>
+              <strong>{electricConsumption.toFixed(1)} kWh</strong>
+            </div>
+            <div className="modern-row">
+              <span>Rate per kWh</span>
+              <strong>{formatPeso(bill.electricRate)}</strong>
+            </div>
+            <div className="modern-row">
+              <span>Additional Charges</span>
+              <strong>{formatPeso(bill.additionalCharges)}</strong>
+            </div>
+          </div>
+
+          <div className="modern-section">
+            <div className="modern-section-title">
+              <h3>Payment and Balance</h3>
+            </div>
+
+            <div className="modern-row">
+              <span>Previous Unpaid Balance</span>
+              <strong>{formatPeso(bill.previousUnpaidBalance)}</strong>
+            </div>
+            <div className="modern-row">
+              <span>Amount Paid</span>
+              <strong>{formatPeso(bill.amountPaid)}</strong>
+            </div>
+          </div>
+
+          <div className="modern-total">
+            <span>Total Amount Due</span>
+            <strong>{formatPeso(totalDue)}</strong>
+          </div>
         </div>
-        <div>
-          <span>Billing Date:</span>
-          <strong>{bill.billingDate}</strong>
-        </div>
-        <div>
-          <span>Billing Period:</span>
-          <strong>{bill.billingPeriod}</strong>
-        </div>
-        <div>
-          <span>Due Date:</span>
-          <strong>{bill.dueDate}</strong>
-        </div>
-      </div>
-
-      <div className="section-header water">WATER BILL</div>
-
-      <div className="bill-row">
-        <span>Previous Reading (cu.m)</span>
-        <strong>{bill.previousWaterReading}</strong>
-      </div>
-      <div className="bill-row">
-        <span>Current Reading (cu.m)</span>
-        <strong>{bill.currentWaterReading}</strong>
-      </div>
-      <div className="bill-row">
-        <span>Consumption (cu.m)</span>
-        <strong>{waterConsumption.toFixed(1)}</strong>
-      </div>
-      <div className="bill-row">
-        <span>Rate per cu.m</span>
-        <strong>{formatPeso(bill.waterRate)}</strong>
-      </div>
-      <div className="bill-row amount">
-        <span>Water Bill Amount</span>
-        <strong>{formatPeso(waterBill)}</strong>
-      </div>
-
-      <div className="section-header electric">ELECTRICITY BILL</div>
-
-      <div className="bill-row">
-        <span>Previous Reading (kWh)</span>
-        <strong>{bill.previousElectricReading}</strong>
-      </div>
-      <div className="bill-row">
-        <span>Current Reading (kWh)</span>
-        <strong>{bill.currentElectricReading}</strong>
-      </div>
-      <div className="bill-row">
-        <span>Consumption (kWh)</span>
-        <strong>{electricConsumption.toFixed(1)}</strong>
-      </div>
-      <div className="bill-row">
-        <span>Rate per kWh</span>
-        <strong>{formatPeso(bill.electricRate)}</strong>
-      </div>
-      <div className="bill-row">
-        <span>Additional Charges</span>
-        <strong>{formatPeso(bill.additionalCharges)}</strong>
-      </div>
-      <div className="bill-row amount">
-        <span>Electricity Bill Amount</span>
-        <strong>{formatPeso(electricBill)}</strong>
-      </div>
-
-      <div className="section-header balance">PAYMENT AND BALANCE</div>
-
-      <div className="bill-row">
-        <span>Previous Unpaid Balance</span>
-        <strong>{formatPeso(bill.previousUnpaidBalance)}</strong>
-      </div>
-      <div className="bill-row">
-        <span>Amount Paid</span>
-        <strong>{formatPeso(bill.amountPaid)}</strong>
-      </div>
-
-      <div className="total-row">
-        <span>Total Amount Due</span>
-        <strong>{formatPeso(totalDue)}</strong>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
 
