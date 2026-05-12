@@ -1,20 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import RentBillCard from "./components/RentBillCard";
 import Sidebar from "./components/Sidebar";
 import UtilityBillCard from "./components/UtilityBillCard";
-import { rentBills, tenants as sampleTenants, utilityBills } from "./data/sampleData";
+import { rentBills } from "./data/sampleData";
 import SettingsPage from "./pages/SettingsPage";
 import TenantsPage from "./pages/TenantsPage";
-import type { BillingSettings, Page } from "./types/billing";
-import {
+import type {
+  BillingSettings,
+  Page,
+  Tenant,
+  UtilityBill,
+} from "./types/billing";import {
   calculateTotalRentDue,
   calculateTotalUtilityDue,
   formatPeso,
 } from "./utils/billingCalculations";
 
+const API_URL = "http://localhost:5000/api";
+
 function App() {
   const [activePage, setActivePage] = useState<Page>("dashboard");
-  const [tenants, setTenants] = useState(sampleTenants);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [isLoadingTenants, setIsLoadingTenants] = useState(true);
+  const [utilityBills, setUtilityBills] = useState<UtilityBill[]>([]);
+  const [isLoadingUtilityBills, setIsLoadingUtilityBills] = useState(true);
 
   const [settings, setSettings] = useState<BillingSettings>({
     waterRate: 42.6,
@@ -23,6 +32,130 @@ function App() {
     utilityDueDay: 2,
     rentDueDay: 5,
   });
+
+  useEffect(() => {
+    async function fetchTenants() {
+      try {
+        const response = await fetch(`${API_URL}/tenants`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch tenants");
+        }
+
+        const data: Tenant[] = await response.json();
+        setTenants(data);
+      } catch (error) {
+        console.error(error);
+        alert("Could not load tenants from database.");
+      } finally {
+        setIsLoadingTenants(false);
+      }
+    }
+
+    fetchTenants();
+  }, []);
+
+  useEffect(() => {
+  async function fetchUtilityBills() {
+    try {
+      const response = await fetch(`${API_URL}/utility-bills`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch utility bills");
+      }
+
+      const data: UtilityBill[] = await response.json();
+
+      const convertedData = data.map((bill) => ({
+        ...bill,
+        previousWaterReading: Number(bill.previousWaterReading),
+        currentWaterReading: Number(bill.currentWaterReading),
+        waterRate: Number(bill.waterRate),
+        previousElectricReading: Number(bill.previousElectricReading),
+        currentElectricReading: Number(bill.currentElectricReading),
+        electricRate: Number(bill.electricRate),
+        additionalCharges: Number(bill.additionalCharges),
+        previousUnpaidBalance: Number(bill.previousUnpaidBalance),
+        amountPaid: Number(bill.amountPaid),
+      }));
+
+      setUtilityBills(convertedData);
+    } catch (error) {
+      console.error(error);
+      alert("Could not load utility bills from database.");
+    } finally {
+      setIsLoadingUtilityBills(false);
+    }
+  }
+
+  fetchUtilityBills();
+}, []);
+
+  async function handleAddTenant(tenant: Tenant) {
+    try {
+      const response = await fetch(`${API_URL}/tenants`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: tenant.name,
+          roomNo: tenant.roomNo,
+          monthlyRent: tenant.monthlyRent,
+          status: tenant.status,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add tenant");
+      }
+
+      const tenantsResponse = await fetch(`${API_URL}/tenants`);
+      const updatedTenants: Tenant[] = await tenantsResponse.json();
+
+      setTenants(updatedTenants);
+    } catch (error) {
+      console.error(error);
+      alert("Could not add tenant to database.");
+    }
+  }
+
+async function handleDeleteTenant(tenantId: number) {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this tenant?"
+  );
+
+  if (!confirmDelete) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/tenants/${tenantId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Delete failed response:", errorText);
+
+      throw new Error(
+        `Failed to delete tenant. Server returned status ${response.status}.`
+      );
+    }
+
+    setTenants((currentTenants) =>
+      currentTenants.filter((tenant) => tenant.id !== tenantId)
+    );
+  } catch (error) {
+    console.error(error);
+
+    if (error instanceof Error) {
+      alert(error.message);
+    } else {
+      alert("Could not delete tenant from database.");
+    }
+  }
+}
 
   const utilityBillsWithSettings = utilityBills.map((bill) => ({
     ...bill,
@@ -72,7 +205,7 @@ function App() {
               <div className="dashboard-card tenants-card">
                 <div className="dashboard-card-icon">◎</div>
                 <span>Total Tenants</span>
-                <strong>{tenants.length}</strong>
+                <strong>{isLoadingTenants ? "..." : tenants.length}</strong>
                 <p>Currently registered tenants</p>
               </div>
 
@@ -101,33 +234,37 @@ function App() {
         )}
 
         {activePage === "tenants" && (
-          <TenantsPage
-            tenants={tenants}
-            onAddTenant={(tenant) => setTenants([...tenants, tenant])}
-          />
-        )}
+<TenantsPage
+  tenants={tenants}
+  onAddTenant={handleAddTenant}
+  onDeleteTenant={handleDeleteTenant}
+/>        )}
 
-        {activePage === "utility" && (
-          <section className="page-section">
-            <h2>Utility Bills</h2>
+      {activePage === "utility" && (
+  <section className="page-section">
+    <h2>Utility Bills</h2>
 
-            <div className="bill-grid">
-              {utilityBillsWithSettings.map((bill) => {
-                const tenant = tenants.find(
-                  (tenant) => tenant.id === bill.tenantId
-                );
+    {isLoadingUtilityBills ? (
+      <p>Loading utility bills...</p>
+    ) : (
+      <div className="bill-grid">
+        {utilityBillsWithSettings.map((bill) => {
+          const tenant = tenants.find(
+            (tenant) => tenant.id === bill.tenantId
+          );
 
-                if (!tenant) {
-                  return null;
-                }
+          if (!tenant) {
+            return null;
+          }
 
-                return (
-                  <UtilityBillCard key={bill.id} tenant={tenant} bill={bill} />
-                );
-              })}
-            </div>
-          </section>
-        )}
+          return (
+            <UtilityBillCard key={bill.id} tenant={tenant} bill={bill} />
+          );
+        })}
+      </div>
+    )}
+  </section>
+)}
 
         {activePage === "rent" && (
           <section className="page-section">

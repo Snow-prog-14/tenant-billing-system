@@ -3,10 +3,9 @@ import type { Tenant } from "../types/billing";
 
 type AddTenantFormProps = {
   onAddTenant: (tenant: Tenant) => void;
-  nextTenantId: number;
 };
 
-function AddTenantForm({ onAddTenant, nextTenantId }: AddTenantFormProps) {
+function AddTenantForm({ onAddTenant }: AddTenantFormProps) {
   const [name, setName] = useState("");
   const [roomNo, setRoomNo] = useState("");
   const [monthlyRent, setMonthlyRent] = useState("3000");
@@ -20,7 +19,7 @@ function AddTenantForm({ onAddTenant, nextTenantId }: AddTenantFormProps) {
     }
 
     const newTenant: Tenant = {
-      id: nextTenantId,
+      id: 0,
       name: name.trim(),
       roomNo: roomNo.trim(),
       monthlyRent: Number(monthlyRent),

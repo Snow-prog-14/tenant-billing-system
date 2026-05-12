@@ -5,12 +5,14 @@ import { formatPeso } from "../utils/billingCalculations";
 type TenantsPageProps = {
   tenants: Tenant[];
   onAddTenant: (tenant: Tenant) => void;
+  onDeleteTenant: (tenantId: number) => void;
 };
 
-function TenantsPage({ tenants, onAddTenant }: TenantsPageProps) {
-  const nextTenantId =
-    tenants.length > 0 ? Math.max(...tenants.map((tenant) => tenant.id)) + 1 : 1;
-
+function TenantsPage({
+  tenants,
+  onAddTenant,
+  onDeleteTenant,
+}: TenantsPageProps) {
   return (
     <section className="page-section">
       <div className="section-title-row">
@@ -22,10 +24,7 @@ function TenantsPage({ tenants, onAddTenant }: TenantsPageProps) {
 
       <div className="form-card">
         <h3>Add Tenant</h3>
-        <AddTenantForm
-          nextTenantId={nextTenantId}
-          onAddTenant={onAddTenant}
-        />
+        <AddTenantForm onAddTenant={onAddTenant} />
       </div>
 
       <div className="table-card">
@@ -36,6 +35,7 @@ function TenantsPage({ tenants, onAddTenant }: TenantsPageProps) {
               <th>Tenant Name</th>
               <th>Monthly Rent</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
@@ -44,14 +44,28 @@ function TenantsPage({ tenants, onAddTenant }: TenantsPageProps) {
               <tr key={tenant.id}>
                 <td>{tenant.roomNo}</td>
                 <td>{tenant.name}</td>
-                <td>{formatPeso(tenant.monthlyRent)}</td>
+                <td>{formatPeso(Number(tenant.monthlyRent))}</td>
                 <td>
                   <span className={`status-badge ${tenant.status}`}>
                     {tenant.status}
                   </span>
                 </td>
+                <td>
+                  <button
+                    className="danger-button"
+                    onClick={() => onDeleteTenant(tenant.id)}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
+
+            {tenants.length === 0 && (
+              <tr>
+                <td colSpan={5}>No tenants found.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
