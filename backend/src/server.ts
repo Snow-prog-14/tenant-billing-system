@@ -75,7 +75,8 @@ app.get("/", (_req: Request, res: Response) => {  res.json({
   });
 });
 
-app.get("/api/health", async (_req: Request, res: Response) => {  try {
+app.get("/api/health", async (_req: Request, res: Response) => {
+  try {
     const [rows] = await db.query("SELECT 1 + 1 AS result");
 
     res.json({
@@ -83,15 +84,20 @@ app.get("/api/health", async (_req: Request, res: Response) => {  try {
       database: "connected",
       test: rows,
     });
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    console.error("Health check DB error:", error);
 
     res.status(500).json({
-  status: "error",
-  database: "not connected",
-  message: "Could not connect to MySQL database",
-  error: error instanceof Error ? error.message : String(error),
-});
+      status: "error",
+      database: "not connected",
+      message: "Could not connect to MySQL database",
+      errorMessage: error?.message || null,
+      errorCode: error?.code || null,
+      errorNumber: error?.errno || null,
+      sqlState: error?.sqlState || null,
+      sqlMessage: error?.sqlMessage || null,
+      raw: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+    });
   }
 });
 
