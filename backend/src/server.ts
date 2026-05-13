@@ -24,7 +24,14 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Extended Request type to include auth info
+type DataScope = "demo" | "personal";
+
 interface AuthRequest extends Request {
+  user?: {
+    mode: DataScope;
+  };
+  dataScope?: DataScope;
+  isAuthenticated?: boolean;
   isPersonal?: boolean;
 }
 
@@ -58,14 +65,12 @@ app.use(authenticate);
 
 const PORT = process.env.PORT || 5000;
 
-app.get("/", (_req, res) => {
-  res.json({
+app.get("/", (_req: Request, res: Response) => {  res.json({
     message: "Tenant Billing Backend is running",
   });
 });
 
-app.get("/api/health", async (_req, res) => {
-  try {
+app.get("/api/health", async (_req: Request, res: Response) => {  try {
     const [rows] = await db.query("SELECT 1 + 1 AS result");
 
     res.json({
@@ -85,8 +90,8 @@ app.get("/api/health", async (_req, res) => {
 });
 
 // Authentication Routes
-app.post("/api/auth/login", (req, res) => {
-  const { password } = req.body;
+app.post("/api/auth/login", (req: Request, res: Response) => {
+    const { password } = req.body;
 
   if (password === ADMIN_PASSWORD) {
     const token = jwt.sign({ authenticated: true }, JWT_SECRET, {
@@ -106,8 +111,8 @@ app.post("/api/auth/login", (req, res) => {
   res.status(401).json({ message: "Invalid password" });
 });
 
-app.post("/api/auth/logout", (_req, res) => {
-  res.clearCookie("auth_token", {
+app.post("/api/auth/logout", (_req: Request, res: Response) => {
+    res.clearCookie("auth_token", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -513,8 +518,8 @@ app.delete("/api/rent-bills/:id", requireAuth, async (req: AuthRequest, res) => 
   }
 });
 
-app.get("/api/settings", async (_req, res) => {
-  try {
+app.get("/api/settings", async (_req: Request, res: Response) => {
+    try {
     const [rows] = await db.query(`
       SELECT
         id,
@@ -694,8 +699,8 @@ app.delete("/api/payments/:id", requireAuth, async (req: AuthRequest, res) => {
 });
 
 
-app.get("/api/calendar/months", async (_req, res) => {
-  try {
+app.get("/api/calendar/months", async (_req: Request, res: Response) => {
+    try {
     const [rows] = await db.query(`
       SELECT DISTINCT
         month_key AS monthKey,
