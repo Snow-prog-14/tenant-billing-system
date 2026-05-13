@@ -125,14 +125,14 @@ app.post("/api/auth/logout", (_req: Request, res: Response) => {
   res.json({ message: "Logged out", mode: "demo" });
 });
 
-app.get("/api/auth/me", (req: Request, res) => {
+app.get("/api/auth/me", (req: Request, res: Response) => {
   res.json({
     authenticated: !!req.isPersonal,
     mode: req.isPersonal ? "personal" : "demo",
   });
 });
 
-app.get("/api/tenants", async (req: Request, res) => {
+app.get("/api/tenants", async (req: Request, res: Response) => {
   try {
     const scope = req.isPersonal ? "personal" : "demo";
     const [rows] = await db.query(
@@ -157,7 +157,7 @@ app.get("/api/tenants", async (req: Request, res) => {
   }
 });
 
-app.post("/api/tenants", requireAuth, async (req: Request, res) => {
+app.post("/api/tenants", requireAuth, async (req: Request, res: Response) => {
   try {
     const { name, roomNo, monthlyRent, status } = req.body;
 
@@ -185,7 +185,7 @@ app.post("/api/tenants", requireAuth, async (req: Request, res) => {
   }
 });
 
-app.put("/api/tenants/:id", requireAuth, async (req: Request, res) => {
+app.put("/api/tenants/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantId = Number(req.params.id);
     const { name, roomNo, monthlyRent, status } = req.body;
@@ -220,7 +220,7 @@ app.put("/api/tenants/:id", requireAuth, async (req: Request, res) => {
   }
 });
 
-app.delete("/api/tenants/:id", requireAuth, async (req: Request, res) => {
+app.delete("/api/tenants/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantId = Number(req.params.id);
 
@@ -264,7 +264,7 @@ app.delete("/api/tenants/:id", requireAuth, async (req: Request, res) => {
   }
 });
 
-app.get("/api/utility-bills", async (req: Request, res) => {
+app.get("/api/utility-bills", async (req: Request, res: Response) => {
   try {
     const scope = req.isPersonal ? "personal" : "demo";
     const [rows] = await db.query(
@@ -300,7 +300,7 @@ app.get("/api/utility-bills", async (req: Request, res) => {
   }
 });
 
-app.post("/api/utility-bills", requireAuth, async (req: Request, res) => {
+app.post("/api/utility-bills", requireAuth, async (req: Request, res: Response) => {
   try {
     const {
       tenantId,
@@ -384,7 +384,7 @@ app.post("/api/utility-bills", requireAuth, async (req: Request, res) => {
   }
 });
 
-app.get("/api/rent-bills", async (req: Request, res) => {
+app.get("/api/rent-bills", async (req: Request, res: Response) => {
   try {
     const scope = req.isPersonal ? "personal" : "demo";
     const [rows] = await db.query(
@@ -412,7 +412,7 @@ app.get("/api/rent-bills", async (req: Request, res) => {
   }
 });
 
-app.post("/api/rent-bills", requireAuth, async (req: Request, res) => {
+app.post("/api/rent-bills", requireAuth, async (req: Request, res: Response) => {
   try {
     const {
       tenantId,
@@ -461,7 +461,7 @@ app.post("/api/rent-bills", requireAuth, async (req: Request, res) => {
   }
 });
 
-app.delete("/api/utility-bills/:id", requireAuth, async (req: Request, res) => {
+app.delete("/api/utility-bills/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const billId = Number(req.params.id);
 
@@ -492,7 +492,7 @@ app.delete("/api/utility-bills/:id", requireAuth, async (req: Request, res) => {
   }
 });
 
-app.delete("/api/rent-bills/:id", requireAuth, async (req: Request, res) => {
+app.delete("/api/rent-bills/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const billId = Number(req.params.id);
 
@@ -556,7 +556,7 @@ app.get("/api/settings", async (_req: Request, res: Response) => {
   }
 });
 
-app.put("/api/settings", requireAuth, async (req: Request, res) => {
+app.put("/api/settings", requireAuth, async (req: Request, res: Response) => {
   try {
     const {
       waterRate,
@@ -610,7 +610,7 @@ app.put("/api/settings", requireAuth, async (req: Request, res) => {
   }
 });
 
-app.get("/api/payments", async (req: Request, res) => {
+app.get("/api/payments", async (req: Request, res: Response) => {
   try {
     const scope = req.isPersonal ? "personal" : "demo";
     const [rows] = await db.query(
@@ -636,7 +636,7 @@ app.get("/api/payments", async (req: Request, res) => {
   }
 });
 
-app.get("/api/payments/tenant/:tenantId", async (req: Request, res) => {
+app.get("/api/payments/tenant/:tenantId", async (req: Request, res: Response) => {
   try {
     const tenantId = Number(req.params.tenantId);
     const scope = req.isPersonal ? "personal" : "demo";
@@ -663,7 +663,7 @@ app.get("/api/payments/tenant/:tenantId", async (req: Request, res) => {
   }
 });
 
-app.post("/api/payments", requireAuth, async (req: Request, res) => {
+app.post("/api/payments", requireAuth, async (req: Request, res: Response) => {
   try {
     const { tenantId, billType, billId, amount, datePaid, notes } = req.body;
     if (!tenantId || !billType || !billId || amount === undefined || !datePaid) {
@@ -683,7 +683,7 @@ app.post("/api/payments", requireAuth, async (req: Request, res) => {
   }
 });
 
-app.delete("/api/payments/:id", requireAuth, async (req: Request, res) => {
+app.delete("/api/payments/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const paymentId = Number(req.params.id);
 
