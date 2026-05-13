@@ -6,12 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:backend": "cd backend && npm install && npm run build",
-    "build:all": "npm run build && npm run build:backend",
-    "start": "cross-env NODE_ENV=production node backend/dist/server.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
+
   "dependencies": {
     "html-to-image": "^1.11.13",
     "react": "^19.2.6",

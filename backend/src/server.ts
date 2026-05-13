@@ -56,7 +56,7 @@ const requireAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
 
 app.use(authenticate);
 
-const PORT = Number(process.env.PORT) || 5000;
+const PORT = process.env.PORT || 5000;
 
 app.get("/", (_req, res) => {
   res.json({
@@ -96,7 +96,7 @@ app.post("/api/auth/login", (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
 
@@ -107,7 +107,11 @@ app.post("/api/auth/login", (req, res) => {
 });
 
 app.post("/api/auth/logout", (_req, res) => {
-  res.clearCookie("auth_token");
+  res.clearCookie("auth_token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  });
   res.json({ message: "Logged out", mode: "demo" });
 });
 
@@ -712,19 +716,6 @@ app.get("/api/calendar/months", async (_req, res) => {
     });
   }
 });
-
-// Serve static files from React build in production
-if (process.env.NODE_ENV === "production") {
-  const distPath = path.join(__dirname, "../../dist");
-  app.use(express.static(distPath));
-
-  // Fallback for React Router (must be AFTER all API routes)
-  app.get("*", (req, res) => {
-    if (!req.path.startsWith("/api")) {
-      res.sendFile(path.join(distPath, "index.html"));
-    }
-  });
-}
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
