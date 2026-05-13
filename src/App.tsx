@@ -8,6 +8,8 @@ import SettingsPage from "./pages/SettingsPage";
 import TenantDetailsPage from "./pages/TenantDetailsPage";
 import TenantsPage from "./pages/TenantsPage";
 import type {
+  AppMode,
+  AuthResponse,
   BillingSettings,
   CalendarMonth,
   Page,
@@ -26,6 +28,12 @@ const API_URL = "http://localhost:5000/api";
 
 function App() {
   const [activePage, setActivePage] = useState<Page>("dashboard");
+  const [mode, setMode] = useState<AppMode>("demo");
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [logoTapCount, setLogoTapCount] = useState(0);
+  const [lastTapTime, setLastTapTime] = useState(0);
 
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [utilityBills, setUtilityBills] = useState<UtilityBill[]>([]);
@@ -50,17 +58,106 @@ function App() {
   });
 
   useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
     fetchSettings();
     fetchTenants();
     fetchUtilityBills();
     fetchRentBills();
     fetchPayments();
     fetchCalendarMonths();
+  }, [mode]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === "L") {
+        event.preventDefault();
+        setIsLoginModalOpen(true);
+      }
+      if (event.key === "Escape") {
+        setIsLoginModalOpen(false);
+        setLoginPassword("");
+        setLoginError("");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  async function checkAuth() {
+    try {
+      const response = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
+      if (response.ok) {
+        const data: AuthResponse = await response.json();
+        setMode(data.mode);
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+    }
+  }
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setLoginError("");
+
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: loginPassword }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Login failed");
+      }
+
+      const data: AuthResponse = await response.json();
+      setMode(data.mode);
+      setIsLoginModalOpen(false);
+      setLoginPassword("");
+    } catch (error: any) {
+      setLoginError(error.message);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
+      setMode("demo");
+      setActivePage("dashboard");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  }
+
+  function handleLogoClick() {
+    if (mode === "personal") return;
+
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapTime;
+
+    if (timeSinceLastTap < 3000) {
+      const newCount = logoTapCount + 1;
+      if (newCount >= 5) {
+        setIsLoginModalOpen(true);
+        setLogoTapCount(0);
+      } else {
+        setLogoTapCount(newCount);
+      }
+    } else {
+      setLogoTapCount(1);
+    }
+    setLastTapTime(now);
+  }
 
   async function fetchCalendarMonths() {
     try {
-      const response = await fetch(`${API_URL}/calendar/months`);
+      const response = await fetch(`${API_URL}/calendar/months`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch calendar months");
       const data: CalendarMonth[] = await response.json();
       setCalendarMonths(data);
@@ -72,7 +169,7 @@ function App() {
 
   async function fetchSettings() {
     try {
-      const response = await fetch(`${API_URL}/settings`);
+      const response = await fetch(`${API_URL}/settings`, { credentials: "include" });
 
       if (!response.ok) {
         throw new Error("Failed to fetch settings");
@@ -97,7 +194,8 @@ function App() {
 
   async function fetchTenants() {
     try {
-      const response = await fetch(`${API_URL}/tenants`);
+      setIsLoadingTenants(true);
+      const response = await fetch(`${API_URL}/tenants`, { credentials: "include" });
 
       if (!response.ok) {
         throw new Error("Failed to fetch tenants");
@@ -115,7 +213,8 @@ function App() {
 
   async function fetchUtilityBills() {
     try {
-      const response = await fetch(`${API_URL}/utility-bills`);
+      setIsLoadingUtilityBills(true);
+      const response = await fetch(`${API_URL}/utility-bills`, { credentials: "include" });
 
       if (!response.ok) {
         throw new Error("Failed to fetch utility bills");
@@ -147,7 +246,8 @@ function App() {
 
   async function fetchRentBills() {
     try {
-      const response = await fetch(`${API_URL}/rent-bills`);
+      setIsLoadingRentBills(true);
+      const response = await fetch(`${API_URL}/rent-bills`, { credentials: "include" });
 
       if (!response.ok) {
         throw new Error("Failed to fetch rent bills");
@@ -173,7 +273,8 @@ function App() {
 
   async function fetchPayments() {
     try {
-      const response = await fetch(`${API_URL}/payments`);
+      setIsLoadingPayments(true);
+      const response = await fetch(`${API_URL}/payments`, { credentials: "include" });
 
       if (!response.ok) {
         throw new Error("Failed to fetch payments");
@@ -247,6 +348,7 @@ function App() {
           monthlyRent: tenant.monthlyRent,
           status: tenant.status,
         }),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -273,6 +375,7 @@ function App() {
         monthlyRent: updatedTenant.monthlyRent,
         status: updatedTenant.status,
       }),
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -302,6 +405,7 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/tenants/${tenantId}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -347,6 +451,7 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(bill),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -372,6 +477,7 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/utility-bills/${billId}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -406,6 +512,7 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(bill),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -431,6 +538,7 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/rent-bills/${billId}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -461,6 +569,7 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payment),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -486,6 +595,7 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/payments/${paymentId}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -511,6 +621,7 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(updatedSettings),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -528,13 +639,53 @@ function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar activePage={activePage} onChangePage={setActivePage} />
+      <Sidebar 
+        activePage={activePage} 
+        onChangePage={setActivePage} 
+        mode={mode} 
+        onLogout={handleLogout}
+        onLogoClick={handleLogoClick}
+      />
 
       <main>
         <header className="app-header">
           <h1>Tenant Billing System</h1>
           <p>Monthly utility and rent billing for tenants</p>
         </header>
+
+        {isLoginModalOpen && (
+          <div className="login-modal-overlay">
+            <div className="login-modal">
+              <h3>Private Login</h3>
+              <p>Enter administrative password to access personal records.</p>
+              
+              <form onSubmit={handleLogin}>
+                <div className="form-group">
+                  <label htmlFor="adminPassword">Password</label>
+                  <input
+                    id="adminPassword"
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoFocus
+                  />
+                </div>
+                
+                {loginError && <p className="login-error-message">{loginError}</p>}
+                
+                <div className="modal-actions">
+                  <button type="button" className="secondary-button" onClick={() => setIsLoginModalOpen(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="primary-button">
+                    Login
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {activePage === "dashboard" && (
           <section className="page-section">
@@ -620,6 +771,7 @@ function App() {
   onDeleteTenant={handleDeleteTenant}
   onUpdateTenant={handleUpdateTenant}
   onViewTenant={handleViewTenant}
+  mode={mode}
 />
         )}
 
@@ -636,6 +788,7 @@ function App() {
                 onDeleteRentBill={handleDeleteRentBill}
                 onAddPayment={handleAddPayment}
                 onDeletePayment={handleDeletePayment}
+                mode={mode}
               />
             ) : (
               <section className="page-section">
@@ -659,12 +812,14 @@ function App() {
                 <p>Review monthly water and electricity bills.</p>
               </div>
 
-           <button
-  className="primary-button page-action-button"
-  onClick={() => setActivePage("addUtility")}
->
-  + Add Utility Bill
-</button>
+           {mode === "personal" && (
+             <button
+               className="primary-button page-action-button"
+               onClick={() => setActivePage("addUtility")}
+             >
+               + Add Utility Bill
+             </button>
+           )}
             </div>
 
             {isLoadingUtilityBills ? (
@@ -691,7 +846,7 @@ function App() {
       (payment.billType === "utility_electric" ||
         payment.billType === "utility_water")
   )}
-  onDeleteBill={handleDeleteUtilityBill}
+  onDeleteBill={mode === "personal" ? handleDeleteUtilityBill : undefined}
 />
                   );
                 })}
@@ -744,12 +899,14 @@ function App() {
                 <h2>Rent Bills</h2>
                 <p>Review monthly room rent bills.</p>
               </div>
-<button
-  className="primary-button page-action-button"
-  onClick={() => setActivePage("addRent")}
->
-  + Add Rent Bill
-</button>
+{mode === "personal" && (
+  <button
+    className="primary-button page-action-button"
+    onClick={() => setActivePage("addRent")}
+  >
+    + Add Rent Bill
+  </button>
+)}
             </div>
 
             {isLoadingRentBills ? (
@@ -766,26 +923,25 @@ function App() {
                   }
 
                   return (
-                  <RentBillCard
-  key={bill.id}
-  tenant={tenant}
-  bill={bill}
-  payments={payments.filter(
-    (payment) =>
-      payment.billId === bill.id &&
-      payment.billType === "rent"
-  )}
-  onDeleteBill={handleDeleteRentBill}
-/>
+                    <RentBillCard
+                      key={bill.id}
+                      tenant={tenant}
+                      bill={bill}
+                      payments={payments.filter(
+                        (payment) =>
+                          payment.billId === bill.id &&
+                          payment.billType === "rent"
+                      )}
+                      onDeleteBill={mode === "personal" ? handleDeleteRentBill : undefined}
+                    />
                   );
-                })}
+                  })}
 
-                {rentBills.length === 0 && <p>No rent bills found.</p>}
-              </div>
-            )}
-          </section>
-        )}
-
+                  {rentBills.length === 0 && <p>No rent bills found.</p>}
+                  </div>
+                  )}
+                  </section>
+                  )}
         {activePage === "addRent" && (
           <section className="page-section">
             <div className="section-title-row">

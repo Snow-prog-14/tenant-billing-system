@@ -1,6 +1,6 @@
 import { useState } from "react";
 import AddTenantForm from "../components/AddTenantForm";
-import type { Tenant } from "../types/billing";
+import type { AppMode, Tenant } from "../types/billing";
 import { formatPeso } from "../utils/billingCalculations";
 
 type TenantsPageProps = {
@@ -9,6 +9,7 @@ type TenantsPageProps = {
   onDeleteTenant: (tenantId: number) => void;
   onUpdateTenant: (tenant: Tenant) => void;
   onViewTenant: (tenantId: number) => void;
+  mode: AppMode;
 };
 
 function TenantsPage({
@@ -17,6 +18,7 @@ function TenantsPage({
   onDeleteTenant,
   onUpdateTenant,
   onViewTenant,
+  mode,
 }: TenantsPageProps) {
   const [editingTenantId, setEditingTenantId] = useState<number | null>(null);
   const [isAddTenantOpen, setIsAddTenantOpen] = useState(false);
@@ -26,6 +28,7 @@ function TenantsPage({
   const [editStatus, setEditStatus] = useState<"active" | "inactive">("active");
 
   function startEditTenant(tenant: Tenant) {
+    if (mode !== "personal") return;
     setEditingTenantId(tenant.id);
     setEditName(tenant.name);
     setEditRoomNo(tenant.roomNo);
@@ -42,6 +45,7 @@ function TenantsPage({
   }
 
   function saveEditTenant(tenant: Tenant) {
+    if (mode !== "personal") return;
     if (!editName.trim() || !editRoomNo.trim() || !editMonthlyRent) {
       alert("Please complete all tenant fields.");
       return;
@@ -76,19 +80,25 @@ function TenantsPage({
   <div className="section-title-row tenants-action-row">
   <div>
     <h2>Tenant Directory</h2>
-    <p>Add, view, edit, or remove tenant records.</p>
+    <p>
+      {mode === "personal" 
+        ? "Add, view, edit, or remove tenant records." 
+        : "View registered tenant records (Read-only)."}
+    </p>
   </div>
 
-  <button
-    className="primary-button page-action-button"
-    type="button"
-    onClick={() => setIsAddTenantOpen((current) => !current)}
-  >
-    {isAddTenantOpen ? "Close Form" : "+ Add Tenant"}
-  </button>
+  {mode === "personal" && (
+    <button
+      className="primary-button page-action-button"
+      type="button"
+      onClick={() => setIsAddTenantOpen((current) => !current)}
+    >
+      {isAddTenantOpen ? "Close Form" : "+ Add Tenant"}
+    </button>
+  )}
 </div>
 
-{isAddTenantOpen && (
+{mode === "personal" && isAddTenantOpen && (
   <div className="tenant-panel add-tenant-panel">
     <div className="tenant-panel-header">
       <div>
@@ -220,19 +230,23 @@ function TenantsPage({
                             View
                           </button>
 
-                          <button
-                            className="secondary-button compact-button"
-                            onClick={() => startEditTenant(tenant)}
-                          >
-                            Edit
-                          </button>
+                          {mode === "personal" && (
+                            <>
+                              <button
+                                className="secondary-button compact-button"
+                                onClick={() => startEditTenant(tenant)}
+                              >
+                                Edit
+                              </button>
 
-                          <button
-                            className="danger-button compact-button"
-                            onClick={() => onDeleteTenant(tenant.id)}
-                          >
-                            Delete
-                          </button>
+                              <button
+                                className="danger-button compact-button"
+                                onClick={() => onDeleteTenant(tenant.id)}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </td>

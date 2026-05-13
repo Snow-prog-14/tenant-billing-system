@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import RentBillCard from "../components/RentBillCard";
 import UtilityBillCard from "../components/UtilityBillCard";
-import type { Payment, RentBill, Tenant, UtilityBill } from "../types/billing";
+import type { AppMode, Payment, RentBill, Tenant, UtilityBill } from "../types/billing";
 import {
   calculateElectricBill,
   calculateWaterBill,
@@ -18,6 +18,7 @@ type TenantDetailsPageProps = {
   onDeleteRentBill: (billId: number) => void;
   onAddPayment: (payment: Omit<Payment, "id">) => void;
   onDeletePayment: (paymentId: number) => void;
+  mode: AppMode;
 };
 
 type SelectedReceipt =
@@ -107,6 +108,7 @@ function TenantDetailsPage({
   onDeleteRentBill,
   onAddPayment,
   onDeletePayment,
+  mode,
 }: TenantDetailsPageProps) {
   const [selectedReceipt, setSelectedReceipt] = useState<SelectedReceipt>(null);
   const [activePaymentRow, setActivePaymentRow] = useState<string | null>(null);
@@ -327,16 +329,18 @@ function TenantDetailsPage({
                         </div>
                       </td>
                       <td>
-                        <button 
-                          className={`compact-button ${isExpanded ? "primary-button" : "secondary-button"}`}
-                          onClick={() => setActivePaymentRow(isExpanded ? null : row.monthKey)}
-                        >
-                          {isExpanded ? "Close" : "Pay"}
-                        </button>
+                        {mode === "personal" && (
+                          <button 
+                            className={`compact-button ${isExpanded ? "primary-button" : "secondary-button"}`}
+                            onClick={() => setActivePaymentRow(isExpanded ? null : row.monthKey)}
+                          >
+                            {isExpanded ? "Close" : "Pay"}
+                          </button>
+                        )}
                       </td>
                     </tr>
                     
-                    {isExpanded && (
+                    {isExpanded && mode === "personal" && (
                       <tr key={`${row.monthKey}-expanded`} className="expanded-payment-row">
                         <td colSpan={12}>
                           <div className="payment-management-grid">
@@ -388,7 +392,11 @@ function TenantDetailsPage({
                                       <td>{p.billType.replace("utility_", "")}</td>
                                       <td>{formatPeso(p.amount)}</td>
                                       <td>{p.notes}</td>
-                                      <td><button className="danger-link" onClick={() => onDeletePayment(p.id)}>Delete</button></td>
+                                      <td>
+                                        {mode === "personal" && (
+                                          <button className="danger-link" onClick={() => onDeletePayment(p.id)}>Delete</button>
+                                        )}
+                                      </td>
                                     </tr>
                                   ))}
                                   {elecPayments.length + waterPayments.length + rentPayments.length === 0 && (

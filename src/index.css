@@ -2299,3 +2299,87 @@ tbody tr:hover,
 .back-button:active {
   transform: translateY(0);
 }
+
+/* =========================================================
+   Login Modal & Auth Styles
+   ========================================================= */
+
+.login-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(33, 24, 39, 0.7);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  animation: drawer-drop 0.3s ease;
+}
+
+.login-modal {
+  width: 100%;
+  max-width: 420px;
+  background: white;
+  padding: 38px;
+  border-radius: 32px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-modal h3 {
+  margin: 0 0 10px;
+  font-size: 26px;
+  letter-spacing: -0.05em;
+  color: var(--purple-dark);
+}
+
+.login-modal p {
+  margin: 0 0 28px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.login-error-message {
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 850;
+  margin: 14px 0 0;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.mode-status {
+  margin-bottom: 12px;
+}
+
+.mode-demo {
+  color: var(--muted) !important;
+}
+
+.mode-personal {
+  color: var(--purple) !important;
+  font-weight: 950;
+}
+
+.logout-button {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--red);
+  font-weight: 850;
+  font-size: 12px;
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+  background: var(--red-soft);
+  border-color: var(--red);
+}

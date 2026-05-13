@@ -1,14 +1,17 @@
-import type { Page } from "../types/billing";
+import type { AppMode, Page } from "../types/billing";
 
 type SidebarProps = {
   activePage: Page;
   onChangePage: (page: Page) => void;
+  mode: AppMode;
+  onLogout: () => void;
+  onLogoClick?: () => void;
 };
 
-function Sidebar({ activePage, onChangePage }: SidebarProps) {
+function Sidebar({ activePage, onChangePage, mode, onLogout, onLogoClick }: SidebarProps) {
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">
+      <div className="sidebar-logo" onClick={onLogoClick} style={{ cursor: "pointer" }}>
         <div className="logo-icon">TB</div>
 
         <div>
@@ -60,8 +63,18 @@ function Sidebar({ activePage, onChangePage }: SidebarProps) {
       </nav>
 
       <div className="sidebar-footer">
-        <span>Current Mode</span>
-        <strong>Local Preview</strong>
+        <div className="mode-status">
+          <span>Current Mode</span>
+          <strong className={mode === "personal" ? "mode-personal" : "mode-demo"}>
+            {mode === "personal" ? "Personal Mode" : "Demo Mode"}
+          </strong>
+        </div>
+        
+        {mode === "personal" && (
+          <button className="logout-button" onClick={onLogout}>
+            Logout
+          </button>
+        )}
       </div>
     </aside>
   );

@@ -79,3 +79,11 @@ export type BillingSettings = {
   utilityDueDay: number;
   rentDueDay: number;
 };
+
+export type AppMode = "demo" | "personal";
+
+export type AuthResponse = {
+  authenticated: boolean;
+  mode: AppMode;
+  message?: string;
+};

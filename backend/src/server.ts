@@ -1,14 +1,59 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
+import cookieParser from "cookie-parser";
 import { db } from "./db";
 
 dotenv.config();
 
 const app = express();
 
-app.use(cors());
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+
+app.use(
+  cors({
+    origin: FRONTEND_URL,
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
+
+// Extended Request type to include auth info
+interface AuthRequest extends Request {
+  isPersonal?: boolean;
+}
+
+// Authentication Middleware
+const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const token = req.cookies.auth_token;
+
+  if (!token) {
+    req.isPersonal = false;
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { authenticated: boolean };
+    req.isPersonal = decoded.authenticated;
+  } catch (error) {
+    req.isPersonal = false;
+  }
+  next();
+};
+
+// Guard for Personal-only actions (Writes/Deletes)
+const requireAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.isPersonal) {
+    return res.status(401).json({ message: "Unauthorized. Personal mode required." });
+  }
+  next();
+};
+
+app.use(authenticate);
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -38,9 +83,45 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 
-app.get("/api/tenants", async (_req, res) => {
+// Authentication Routes
+app.post("/api/auth/login", (req, res) => {
+  const { password } = req.body;
+
+  if (password === ADMIN_PASSWORD) {
+    const token = jwt.sign({ authenticated: true }, JWT_SECRET, {
+      expiresIn: "24h",
+    });
+
+    res.cookie("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
+
+    return res.json({ message: "Login successful", mode: "personal" });
+  }
+
+  res.status(401).json({ message: "Invalid password" });
+});
+
+app.post("/api/auth/logout", (_req, res) => {
+  res.clearCookie("auth_token");
+  res.json({ message: "Logged out", mode: "demo" });
+});
+
+app.get("/api/auth/me", (req: AuthRequest, res) => {
+  res.json({
+    authenticated: !!req.isPersonal,
+    mode: req.isPersonal ? "personal" : "demo",
+  });
+});
+
+app.get("/api/tenants", async (req: AuthRequest, res) => {
   try {
-    const [rows] = await db.query(`
+    const scope = req.isPersonal ? "personal" : "demo";
+    const [rows] = await db.query(
+      `
       SELECT
         id,
         name,
@@ -48,20 +129,20 @@ app.get("/api/tenants", async (_req, res) => {
         monthly_rent AS monthlyRent,
         status
       FROM tenants
+      WHERE data_scope = ?
       ORDER BY id DESC
-    `);
+    `,
+      [scope]
+    );
 
     res.json(rows);
   } catch (error) {
     console.error(error);
-
-    res.status(500).json({
-      message: "Failed to fetch tenants",
-    });
+    res.status(500).json({ message: "Failed to fetch tenants" });
   }
 });
 
-app.post("/api/tenants", async (req, res) => {
+app.post("/api/tenants", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { name, roomNo, monthlyRent, status } = req.body;
 
@@ -73,10 +154,10 @@ app.post("/api/tenants", async (req, res) => {
 
     const [result] = await db.query(
       `
-      INSERT INTO tenants (name, room_no, monthly_rent, status)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO tenants (name, room_no, monthly_rent, status, data_scope)
+      VALUES (?, ?, ?, ?, ?)
       `,
-      [name, roomNo, monthlyRent, status || "active"]
+      [name, roomNo, monthlyRent, status || "active", "personal"]
     );
 
     res.status(201).json({
@@ -85,22 +166,17 @@ app.post("/api/tenants", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-
-    res.status(500).json({
-      message: "Failed to add tenant",
-    });
+    res.status(500).json({ message: "Failed to add tenant" });
   }
 });
 
-app.put("/api/tenants/:id", async (req, res) => {
+app.put("/api/tenants/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
     const tenantId = Number(req.params.id);
     const { name, roomNo, monthlyRent, status } = req.body;
 
     if (!tenantId) {
-      return res.status(400).json({
-        message: "Valid tenant ID is required",
-      });
+      return res.status(400).json({ message: "Valid tenant ID is required" });
     }
 
     if (!name || !roomNo || monthlyRent === undefined || !status) {
@@ -117,136 +193,117 @@ app.put("/api/tenants/:id", async (req, res) => {
         room_no = ?,
         monthly_rent = ?,
         status = ?
-      WHERE id = ?
+      WHERE id = ? AND data_scope = 'personal'
       `,
       [name, roomNo, monthlyRent, status, tenantId]
     );
 
-    res.json({
-      message: "Tenant updated successfully",
-      result,
-    });
+    res.json({ message: "Tenant updated successfully", result });
   } catch (error) {
     console.error("Update tenant error:", error);
-
-    res.status(500).json({
-      message: "Failed to update tenant",
-    });
+    res.status(500).json({ message: "Failed to update tenant" });
   }
 });
 
-app.delete("/api/tenants/:id", async (req, res) => {
+app.delete("/api/tenants/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
     const tenantId = Number(req.params.id);
 
     if (!tenantId) {
-      return res.status(400).json({
-        message: "Valid tenant ID is required",
-      });
+      return res.status(400).json({ message: "Valid tenant ID is required" });
     }
 
-    // Delete related bills and payments
-    await db.query(
-      `
-      DELETE FROM utility_bills
-      WHERE tenant_id = ?
-      `,
+    // Verify ownership before deleting related data
+    const [tenants] = await db.query<any[]>(
+      "SELECT id FROM tenants WHERE id = ? AND data_scope = 'personal'",
       [tenantId]
     );
 
+    if (tenants.length === 0) {
+      return res.status(404).json({ message: "Tenant not found or unauthorized" });
+    }
+
+    // Delete related bills and payments (only for personal scope)
     await db.query(
-      `
-      DELETE FROM rent_bills
-      WHERE tenant_id = ?
-      `,
+      "DELETE FROM utility_bills WHERE tenant_id = ? AND data_scope = 'personal'",
       [tenantId]
     );
-
     await db.query(
-      `
-      DELETE FROM payments
-      WHERE tenant_id = ?
-      `,
+      "DELETE FROM rent_bills WHERE tenant_id = ? AND data_scope = 'personal'",
+      [tenantId]
+    );
+    await db.query(
+      "DELETE FROM payments WHERE tenant_id = ? AND data_scope = 'personal'",
       [tenantId]
     );
 
     const [result] = await db.query(
-      `
-      DELETE FROM tenants
-      WHERE id = ?
-      `,
+      "DELETE FROM tenants WHERE id = ? AND data_scope = 'personal'",
       [tenantId]
     );
 
-    res.json({
-      message: "Tenant deleted successfully",
-      result,
-    });
+    res.json({ message: "Tenant deleted successfully", result });
   } catch (error) {
     console.error("Delete tenant error:", error);
-
-    res.status(500).json({
-      message: "Failed to delete tenant",
-    });
+    res.status(500).json({ message: "Failed to delete tenant" });
   }
 });
 
-app.get("/api/utility-bills", async (_req, res) => {
+app.get("/api/utility-bills", async (req: AuthRequest, res) => {
   try {
-    const [rows] = await db.query(`
+    const scope = req.isPersonal ? "personal" : "demo";
+    const [rows] = await db.query(
+      `
       SELECT
         id,
         tenant_id AS tenantId,
         DATE_FORMAT(billing_date, '%M %d, %Y') AS billingDate,
         billing_period AS billingPeriod,
         DATE_FORMAT(due_date, '%M %d, %Y') AS dueDate,
-
         previous_water_reading AS previousWaterReading,
         current_water_reading AS currentWaterReading,
         water_rate AS waterRate,
-
         previous_electric_reading AS previousElectricReading,
         current_electric_reading AS currentElectricReading,
         electric_rate AS electricRate,
         additional_charges AS additionalCharges,
-
         previous_unpaid_balance AS previousUnpaidBalance,
         amount_paid AS amountPaid,
         DATE_FORMAT(electric_paid_date, '%M %d, %Y') AS electricPaidDate,
         DATE_FORMAT(water_paid_date, '%M %d, %Y') AS waterPaidDate
       FROM utility_bills
+      WHERE data_scope = ?
       ORDER BY id DESC
-    `);
+    `,
+      [scope]
+    );
 
     res.json(rows);
   } catch (error) {
     console.error("Fetch utility bills error:", error);
-
-    res.status(500).json({
-      message: "Failed to fetch utility bills",
-    });
+    res.status(500).json({ message: "Failed to fetch utility bills" });
   }
 });
 
-app.post("/api/utility-bills", async (req, res) => {
+app.post("/api/utility-bills", requireAuth, async (req: AuthRequest, res) => {
   try {
-const {
-  tenantId,
-  billingDate,
-  billingPeriod,
-  dueDate,
-  previousWaterReading,
-  currentWaterReading,
-  waterRate,
-  previousElectricReading,
-  currentElectricReading,
-  electricRate,
-  additionalCharges,
-  previousUnpaidBalance,
-  amountPaid,
-  electricPaidDate,
-  waterPaidDate,
-} = req.body;
+    const {
+      tenantId,
+      billingDate,
+      billingPeriod,
+      dueDate,
+      previousWaterReading,
+      currentWaterReading,
+      waterRate,
+      previousElectricReading,
+      currentElectricReading,
+      electricRate,
+      additionalCharges,
+      previousUnpaidBalance,
+      amountPaid,
+      electricPaidDate,
+      waterPaidDate,
+    } = req.body;
 
     if (
       !tenantId ||
@@ -260,9 +317,7 @@ const {
       currentElectricReading === undefined ||
       electricRate === undefined
     ) {
-      return res.status(400).json({
-        message: "Required utility bill fields are missing",
-      });
+      return res.status(400).json({ message: "Required utility bill fields are missing" });
     }
 
     const [result] = await db.query(
@@ -279,47 +334,46 @@ const {
         current_electric_reading,
         electric_rate,
         additional_charges,
-       previous_unpaid_balance,
-amount_paid,
-electric_paid_date,
-water_paid_date
+        previous_unpaid_balance,
+        amount_paid,
+        electric_paid_date,
+        water_paid_date,
+        data_scope
       )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)      `,
-     [
-  tenantId,
-  billingDate,
-  billingPeriod,
-  dueDate,
-  previousWaterReading,
-  currentWaterReading,
-  waterRate,
-  previousElectricReading,
-  currentElectricReading,
-  electricRate,
-  additionalCharges || 0,
-  previousUnpaidBalance || 0,
-  amountPaid || 0,
-  electricPaidDate || null,
-  waterPaidDate || null,
-]
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        tenantId,
+        billingDate,
+        billingPeriod,
+        dueDate,
+        previousWaterReading,
+        currentWaterReading,
+        waterRate,
+        previousElectricReading,
+        currentElectricReading,
+        electricRate,
+        additionalCharges || 0,
+        previousUnpaidBalance || 0,
+        amountPaid || 0,
+        electricPaidDate || null,
+        waterPaidDate || null,
+        "personal",
+      ]
     );
 
-    res.status(201).json({
-      message: "Utility bill added successfully",
-      result,
-    });
+    res.status(201).json({ message: "Utility bill added successfully", result });
   } catch (error) {
     console.error("Add utility bill error:", error);
-
-    res.status(500).json({
-      message: "Failed to add utility bill",
-    });
+    res.status(500).json({ message: "Failed to add utility bill" });
   }
 });
 
-app.get("/api/rent-bills", async (_req, res) => {
+app.get("/api/rent-bills", async (req: AuthRequest, res) => {
   try {
-    const [rows] = await db.query(`
+    const scope = req.isPersonal ? "personal" : "demo";
+    const [rows] = await db.query(
+      `
       SELECT
         id,
         tenant_id AS tenantId,
@@ -330,35 +384,33 @@ app.get("/api/rent-bills", async (_req, res) => {
         amount_paid AS amountPaid,
         DATE_FORMAT(rent_paid_date, '%M %d, %Y') AS rentPaidDate
       FROM rent_bills
+      WHERE data_scope = ?
       ORDER BY id DESC
-    `);
+    `,
+      [scope]
+    );
 
     res.json(rows);
   } catch (error) {
     console.error("Fetch rent bills error:", error);
-
-    res.status(500).json({
-      message: "Failed to fetch rent bills",
-    });
+    res.status(500).json({ message: "Failed to fetch rent bills" });
   }
 });
 
-app.post("/api/rent-bills", async (req, res) => {
+app.post("/api/rent-bills", requireAuth, async (req: AuthRequest, res) => {
   try {
- const {
-  tenantId,
-  billingPeriod,
-  dueDate,
-  rentAmount,
-  previousUnpaidBalance,
-  amountPaid,
-  rentPaidDate,
-} = req.body;
+    const {
+      tenantId,
+      billingPeriod,
+      dueDate,
+      rentAmount,
+      previousUnpaidBalance,
+      amountPaid,
+      rentPaidDate,
+    } = req.body;
 
     if (!tenantId || !billingPeriod || !dueDate || rentAmount === undefined) {
-      return res.status(400).json({
-        message: "Required rent bill fields are missing",
-      });
+      return res.status(400).json({ message: "Required rent bill fields are missing" });
     }
 
     const [result] = await db.query(
@@ -368,112 +420,91 @@ app.post("/api/rent-bills", async (req, res) => {
         billing_period,
         due_date,
         rent_amount,
-     previous_unpaid_balance,
-amount_paid,
-rent_paid_date
+        previous_unpaid_balance,
+        amount_paid,
+        rent_paid_date,
+        data_scope
       )
-VALUES (?, ?, ?, ?, ?, ?, ?)      `,
-  [
-  tenantId,
-  billingPeriod,
-  dueDate,
-  rentAmount,
-  previousUnpaidBalance || 0,
-  amountPaid || 0,
-  rentPaidDate || null,
-]
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        tenantId,
+        billingPeriod,
+        dueDate,
+        rentAmount,
+        previousUnpaidBalance || 0,
+        amountPaid || 0,
+        rentPaidDate || null,
+        "personal",
+      ]
     );
 
-    res.status(201).json({
-      message: "Rent bill added successfully",
-      result,
-    });
+    res.status(201).json({ message: "Rent bill added successfully", result });
   } catch (error) {
     console.error("Add rent bill error:", error);
-
-    res.status(500).json({
-      message: "Failed to add rent bill",
-    });
+    res.status(500).json({ message: "Failed to add rent bill" });
   }
 });
 
-app.delete("/api/utility-bills/:id", async (req, res) => {
+app.delete("/api/utility-bills/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
     const billId = Number(req.params.id);
 
     if (!billId) {
-      return res.status(400).json({
-        message: "Valid utility bill ID is required",
-      });
+      return res.status(400).json({ message: "Valid utility bill ID is required" });
     }
 
     const [result] = await db.query(
-      `
-      DELETE FROM utility_bills
-      WHERE id = ?
-      `,
+      "DELETE FROM utility_bills WHERE id = ? AND data_scope = 'personal'",
       [billId]
     );
 
-    // Delete related payments
-    await db.query(
-      `
-      DELETE FROM payments
-      WHERE bill_id = ? AND bill_type IN ('utility_electric', 'utility_water')
-      `,
-      [billId]
-    );
+    // Delete related payments (only if bill was in personal scope)
+    if ((result as any).affectedRows > 0) {
+      await db.query(
+        `
+        DELETE FROM payments
+        WHERE bill_id = ? AND bill_type IN ('utility_electric', 'utility_water') AND data_scope = 'personal'
+        `,
+        [billId]
+      );
+    }
 
-    res.json({
-      message: "Utility bill deleted successfully",
-      result,
-    });
+    res.json({ message: "Utility bill deleted successfully", result });
   } catch (error) {
     console.error("Delete utility bill error:", error);
-
-    res.status(500).json({
-      message: "Failed to delete utility bill",
-    });
+    res.status(500).json({ message: "Failed to delete utility bill" });
   }
 });
 
-app.delete("/api/rent-bills/:id", async (req, res) => {
+app.delete("/api/rent-bills/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
     const billId = Number(req.params.id);
 
     if (!billId) {
-      return res.status(400).json({
-        message: "Valid rent bill ID is required",
-      });
+      return res.status(400).json({ message: "Valid rent bill ID is required" });
     }
 
     const [result] = await db.query(
-      `
-      DELETE FROM rent_bills
-      WHERE id = ?
-      `,
+      "DELETE FROM rent_bills WHERE id = ? AND data_scope = 'personal'",
       [billId]
     );
 
-    // Delete related payments
-    await db.query(
-      `
-      DELETE FROM payments
-      WHERE bill_id = ? AND bill_type = 'rent'
-      `,
-      [billId]
-    );
+    // Delete related payments (only if bill was in personal scope)
+    if ((result as any).affectedRows > 0) {
+      await db.query(
+        `
+        DELETE FROM payments
+        WHERE bill_id = ? AND bill_type = 'rent' AND data_scope = 'personal'
+        `,
+        [billId]
+      );
+    }
 
-    res.json({
-      message: "Rent bill deleted successfully",
-      result,
-    });
+    res.json({ message: "Rent bill deleted successfully", result });
   } catch (error) {
     console.error("Delete rent bill error:", error);
-
-    res.status(500).json({
-      message: "Failed to delete rent bill",
-    });
+    res.status(500).json({ message: "Failed to delete rent bill" });
   }
 });
 
@@ -510,7 +541,7 @@ app.get("/api/settings", async (_req, res) => {
   }
 });
 
-app.put("/api/settings", async (req, res) => {
+app.put("/api/settings", requireAuth, async (req: AuthRequest, res) => {
   try {
     const {
       waterRate,
@@ -564,30 +595,9 @@ app.put("/api/settings", async (req, res) => {
   }
 });
 
-app.get("/api/payments", async (_req, res) => {
+app.get("/api/payments", async (req: AuthRequest, res) => {
   try {
-    const [rows] = await db.query(`
-      SELECT
-        id,
-        tenant_id AS tenantId,
-        bill_type AS billType,
-        bill_id AS billId,
-        amount,
-        DATE_FORMAT(date_paid, '%Y-%m-%d') AS datePaid,
-        notes
-      FROM payments
-      ORDER BY id DESC
-    `);
-    res.json(rows);
-  } catch (error) {
-    console.error("Fetch payments error:", error);
-    res.status(500).json({ message: "Failed to fetch payments" });
-  }
-});
-
-app.get("/api/payments/tenant/:tenantId", async (req, res) => {
-  try {
-    const tenantId = Number(req.params.tenantId);
+    const scope = req.isPersonal ? "personal" : "demo";
     const [rows] = await db.query(
       `
       SELECT
@@ -599,10 +609,37 @@ app.get("/api/payments/tenant/:tenantId", async (req, res) => {
         DATE_FORMAT(date_paid, '%Y-%m-%d') AS datePaid,
         notes
       FROM payments
-      WHERE tenant_id = ?
+      WHERE data_scope = ?
       ORDER BY id DESC
     `,
-      [tenantId]
+      [scope]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch payments error:", error);
+    res.status(500).json({ message: "Failed to fetch payments" });
+  }
+});
+
+app.get("/api/payments/tenant/:tenantId", async (req: AuthRequest, res) => {
+  try {
+    const tenantId = Number(req.params.tenantId);
+    const scope = req.isPersonal ? "personal" : "demo";
+    const [rows] = await db.query(
+      `
+      SELECT
+        id,
+        tenant_id AS tenantId,
+        bill_type AS billType,
+        bill_id AS billId,
+        amount,
+        DATE_FORMAT(date_paid, '%Y-%m-%d') AS datePaid,
+        notes
+      FROM payments
+      WHERE tenant_id = ? AND data_scope = ?
+      ORDER BY id DESC
+    `,
+      [tenantId, scope]
     );
     res.json(rows);
   } catch (error) {
@@ -611,7 +648,7 @@ app.get("/api/payments/tenant/:tenantId", async (req, res) => {
   }
 });
 
-app.post("/api/payments", async (req, res) => {
+app.post("/api/payments", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { tenantId, billType, billId, amount, datePaid, notes } = req.body;
     if (!tenantId || !billType || !billId || amount === undefined || !datePaid) {
@@ -619,10 +656,10 @@ app.post("/api/payments", async (req, res) => {
     }
     const [result] = await db.query(
       `
-      INSERT INTO payments (tenant_id, bill_type, bill_id, amount, date_paid, notes)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO payments (tenant_id, bill_type, bill_id, amount, date_paid, notes, data_scope)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-      [tenantId, billType, billId, amount, datePaid, notes || null]
+      [tenantId, billType, billId, amount, datePaid, notes || null, "personal"]
     );
     res.status(201).json({ message: "Payment added successfully", result });
   } catch (error) {
@@ -631,34 +668,23 @@ app.post("/api/payments", async (req, res) => {
   }
 });
 
-app.delete("/api/payments/:id", async (req, res) => {
+app.delete("/api/payments/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
     const paymentId = Number(req.params.id);
 
     if (!paymentId) {
-      return res.status(400).json({
-        message: "Valid payment ID is required",
-      });
+      return res.status(400).json({ message: "Valid payment ID is required" });
     }
 
     const [result] = await db.query(
-      `
-      DELETE FROM payments
-      WHERE id = ?
-      `,
+      "DELETE FROM payments WHERE id = ? AND data_scope = 'personal'",
       [paymentId]
     );
 
-    res.json({
-      message: "Payment deleted successfully",
-      result,
-    });
+    res.json({ message: "Payment deleted successfully", result });
   } catch (error) {
     console.error("Delete payment error:", error);
-
-    res.status(500).json({
-      message: "Failed to delete payment",
-    });
+    res.status(500).json({ message: "Failed to delete payment" });
   }
 });
 
