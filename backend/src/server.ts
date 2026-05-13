@@ -87,10 +87,11 @@ app.get("/api/health", async (_req: Request, res: Response) => {  try {
     console.error(error);
 
     res.status(500).json({
-      status: "error",
-      database: "not connected",
-      message: "Could not connect to MySQL database",
-    });
+  status: "error",
+  database: "not connected",
+  message: "Could not connect to MySQL database",
+  error: error instanceof Error ? error.message : String(error),
+});
   }
 });
 
