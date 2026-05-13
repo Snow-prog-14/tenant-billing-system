@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
+import path from "path";
 import { db } from "./db";
 
 dotenv.config();
@@ -711,6 +712,19 @@ app.get("/api/calendar/months", async (_req, res) => {
     });
   }
 });
+
+// Serve static files from React build in production
+if (process.env.NODE_ENV === "production") {
+  const distPath = path.join(__dirname, "../../dist");
+  app.use(express.static(distPath));
+
+  // Fallback for React Router (must be AFTER all API routes)
+  app.get("*", (req, res) => {
+    if (!req.path.startsWith("/api")) {
+      res.sendFile(path.join(distPath, "index.html"));
+    }
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
