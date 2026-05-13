@@ -10,9 +10,26 @@ dotenv.config();
 
 const app = express();
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
-const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+const JWT_SECRET = process.env.JWT_SECRET;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+if (isProduction && (!JWT_SECRET || !ADMIN_PASSWORD || !FRONTEND_URL)) {
+  throw new Error(
+    "Missing required production environment variables: FRONTEND_URL, JWT_SECRET, or ADMIN_PASSWORD"
+  );
+}
+
+if (!JWT_SECRET || !ADMIN_PASSWORD) {
+  console.warn(
+    "Using local fallback auth values. This should only happen in development."
+  );
+}
+
+const ACTIVE_JWT_SECRET = JWT_SECRET || "local_dev_secret";
+const ACTIVE_ADMIN_PASSWORD = ADMIN_PASSWORD || "admin123";
 
 app.use(
   cors({
@@ -50,7 +67,7 @@ const authenticate = (req: Request, res: Response, next: NextFunction) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { authenticated: boolean };
+    const decoded = jwt.verify(token, ACTIVE_JWT_SECRET) as { authenticated: boolean };
     req.isPersonal = decoded.authenticated;
   } catch (error) {
     req.isPersonal = false;
@@ -105,8 +122,8 @@ app.get("/api/health", async (_req: Request, res: Response) => {
 app.post("/api/auth/login", (req: Request, res: Response) => {
     const { password } = req.body;
 
-  if (password === ADMIN_PASSWORD) {
-    const token = jwt.sign({ authenticated: true }, JWT_SECRET, {
+if (password === ACTIVE_ADMIN_PASSWORD) {
+      const token = jwt.sign({ authenticated: true }, ACTIVE_JWT_SECRET, {
       expiresIn: "24h",
     });
 
