@@ -554,35 +554,62 @@ function App() {
               </div>
             </div>
 
-            <div className="dashboard-grid">
-              <div className="dashboard-card tenants-card">
-                <div className="dashboard-card-icon">◎</div>
-                <span>Total Tenants</span>
-                <strong>{isLoadingTenants ? "..." : tenants.length}</strong>
-                <p>Currently registered tenants</p>
-              </div>
+   <div className="dashboard-pills-grid">
+  <article className="dashboard-pill dashboard-pill--pink">
+    <div className="dashboard-pill__top">
+      <span className="dashboard-pill__chip">Overview</span>
+      <span className="dashboard-pill__mini">01</span>
+    </div>
 
-              <div className="dashboard-card utility-card">
-                <div className="dashboard-card-icon">⚡</div>
-                <span>Total Utility Balance</span>
-                <strong>{formatPeso(totalUtilityDue)}</strong>
-                <p>Remaining water and electricity balance</p>
-              </div>
+    <div className="dashboard-pill__content">
+      <p className="dashboard-pill__title">Total Tenants</p>
+<h3 className="dashboard-pill__value">
+  {isLoadingTenants ? "..." : tenants.length}
+</h3>      <p className="dashboard-pill__meta">Currently registered tenants</p>
+    </div>
+  </article>
 
-              <div className="dashboard-card rent-due-card">
-                <div className="dashboard-card-icon">⌂</div>
-                <span>Total Rent Balance</span>
-                <strong>{formatPeso(totalRentDue)}</strong>
-                <p>Remaining rent balance</p>
-              </div>
+  <article className="dashboard-pill dashboard-pill--green">
+    <div className="dashboard-pill__top">
+      <span className="dashboard-pill__chip">Utilities</span>
+      <span className="dashboard-pill__mini">02</span>
+    </div>
 
-              <div className="dashboard-card collection-card">
-                <div className="dashboard-card-icon">₱</div>
-                <span>Total Balance</span>
-                <strong>{formatPeso(totalUtilityDue + totalRentDue)}</strong>
-                <p>Total remaining amount to collect</p>
-              </div>
-            </div>
+    <div className="dashboard-pill__content">
+      <p className="dashboard-pill__title">Total Utility Balance</p>
+      <h3 className="dashboard-pill__value">{formatPeso(totalUtilityDue)}</h3>
+      <p className="dashboard-pill__meta">Remaining water and electricity balance</p>
+    </div>
+  </article>
+
+  <article className="dashboard-pill dashboard-pill--orange">
+    <div className="dashboard-pill__top">
+      <span className="dashboard-pill__chip">Rent</span>
+      <span className="dashboard-pill__mini">03</span>
+    </div>
+
+    <div className="dashboard-pill__content">
+      <p className="dashboard-pill__title">Total Rent Balance</p>
+      <h3 className="dashboard-pill__value">{formatPeso(totalRentDue)}</h3>
+      <p className="dashboard-pill__meta">Remaining rent balance</p>
+    </div>
+  </article>
+
+  <article className="dashboard-pill dashboard-pill--blue">
+    <div className="dashboard-pill__top">
+      <span className="dashboard-pill__chip">Summary</span>
+      <span className="dashboard-pill__mini">04</span>
+    </div>
+
+    <div className="dashboard-pill__content">
+      <p className="dashboard-pill__title">Total Balance</p>
+      <h3 className="dashboard-pill__value">
+        {formatPeso(totalUtilityDue + totalRentDue)}
+      </h3>
+      <p className="dashboard-pill__meta">Total remaining amount to collect</p>
+    </div>
+  </article>
+</div>
           </section>
         )}
 
