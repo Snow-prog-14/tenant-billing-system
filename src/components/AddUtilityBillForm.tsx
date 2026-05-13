@@ -25,6 +25,36 @@ function toInputDate(date: Date) {
   return date.toISOString().split("T")[0];
 }
 
+function getFallbackCalendarMonths(): CalendarMonth[] {
+  const months: CalendarMonth[] = [];
+  const startYear = 2025;
+  const endYear = 2027;
+
+  for (let year = startYear; year <= endYear; year += 1) {
+    for (let month = 1; month <= 12; month += 1) {
+      const date = new Date(year, month - 1, 1);
+
+      const monthName = date.toLocaleDateString("en-US", {
+        month: "long",
+      });
+
+      const shortMonth = date.toLocaleDateString("en-US", {
+        month: "short",
+      });
+
+      months.push({
+monthKey: Number(`${year}${String(month).padStart(2, "0")}`),        year,
+        numMonth: month,
+        monthName,
+        shortMonth,
+        monthLabel: `${monthName} ${year}`,
+      });
+    }
+  }
+
+  return months;
+}
+
 function getBillingDateFromMonth(monthValue: string) {
   if (!monthValue) {
     return "";
@@ -47,6 +77,10 @@ function getBillingPeriodFromMonth(monthValue: string) {
   const endDate = new Date(year, month - 1, 25);
 
   return `${formatDateLong(startDate)} – ${formatDateLong(endDate)}`;
+}
+
+function getMonthValue(month: CalendarMonth) {
+  return `${month.year}-${String(month.numMonth).padStart(2, "0")}`;
 }
 
 function getDueDateFromBillingMonth(monthValue: string, utilityDueDay: number) {
@@ -72,6 +106,8 @@ function AddUtilityBillForm({
 }: AddUtilityBillFormProps) {
   const [tenantId, setTenantId] = useState("");
   const [billingMonth, setBillingMonth] = useState("");
+  const [billingMonthSearch, setBillingMonthSearch] = useState("");
+  const [isBillingMonthOpen, setIsBillingMonthOpen] = useState(false);
   const [billingDate, setBillingDate] = useState("");
   const [billingPeriod, setBillingPeriod] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -89,6 +125,30 @@ function AddUtilityBillForm({
 const [waterPaidDate, setWaterPaidDate] = useState("");
 
   const selectedTenant = tenants.find((tenant) => tenant.id === Number(tenantId));
+  const availableCalendarMonths =
+  calendarMonths.length > 0 ? calendarMonths : getFallbackCalendarMonths();
+
+  const filteredCalendarMonths = availableCalendarMonths.filter((month) =>
+  month.monthLabel.toLowerCase().includes(billingMonthSearch.toLowerCase())
+);
+
+function selectBillingMonth(month: CalendarMonth) {
+  setBillingMonth(getMonthValue(month));
+  setBillingMonthSearch(month.monthLabel);
+  setIsBillingMonthOpen(false);
+}
+
+  function handleBillingMonthSearch(value: string) {
+  setBillingMonthSearch(value);
+
+  const selectedMonth = availableCalendarMonths.find(
+    (month) => month.monthLabel.toLowerCase() === value.toLowerCase()
+  );
+
+  if (selectedMonth) {
+    setBillingMonth(getMonthValue(selectedMonth));
+  }
+}
 
   const latestBillForTenant = useMemo(() => {
     if (!tenantId) {
@@ -177,6 +237,7 @@ waterPaidDate: waterPaidDate || null,
 
     setTenantId("");
     setBillingMonth("");
+    setBillingMonthSearch("");
     setBillingDate("");
     setBillingPeriod("");
     setDueDate("");
@@ -226,24 +287,54 @@ waterPaidDate: waterPaidDate || null,
 
           <div className="form-group">
             <label htmlFor="billingMonth">Billing Month</label>
-            <select
-              id="billingMonth"
-              value={billingMonth}
-              onChange={(event) => setBillingMonth(event.target.value)}
-            >
-              <option value="">Select billing month</option>
-              {calendarMonths.map((month) => {
-                const value = `${month.year}-${String(month.numMonth).padStart(
-                  2,
-                  "0"
-                )}`;
-                return (
-                  <option key={month.monthKey} value={value}>
-                    {month.monthLabel}
-                  </option>
-                );
-              })}
-            </select>
+   <div className="searchable-select">
+  <input
+    id="rentBillingMonth"
+    type="text"
+    value={billingMonthSearch}
+    onChange={(event) => handleBillingMonthSearch(event.target.value)}
+    onFocus={() => setIsBillingMonthOpen(true)}
+    onBlur={() => {
+      setTimeout(() => setIsBillingMonthOpen(false), 150);
+    }}
+    placeholder="Search billing month"
+    autoComplete="off"
+  />
+
+  <button
+    type="button"
+    className="searchable-select-arrow"
+    onMouseDown={(event) => {
+      event.preventDefault();
+      setIsBillingMonthOpen((current) => !current);
+    }}
+  >
+    ▾
+  </button>
+
+  {isBillingMonthOpen && (
+    <div className="searchable-select-menu">
+      {filteredCalendarMonths.length > 0 ? (
+        filteredCalendarMonths.map((month) => (
+          <button
+            key={month.monthKey}
+            type="button"
+            className="searchable-select-option"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              selectBillingMonth(month);
+            }}
+          >
+            <span>{month.monthLabel}</span>
+            <small>{month.shortMonth} {month.year}</small>
+          </button>
+        ))
+      ) : (
+        <div className="searchable-select-empty">No month found</div>
+      )}
+    </div>
+  )}
+</div>
           </div>
 
           <div className="form-group">

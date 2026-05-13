@@ -231,9 +231,10 @@ function TenantDetailsPage({
     <section className="page-section tenant-ledger-page">
       <div className="tenant-profile-hero">
         <div>
-          <button className="ghost-button" onClick={onBack}>
-            ← Back to Tenants
-          </button>
+         <button className="back-button" onClick={onBack} type="button">
+  <span>←</span>
+  Back to Tenants
+</button>
 
           <p className="eyebrow">Tenant Ledger</p>
           <h2>{tenant.name}</h2>
